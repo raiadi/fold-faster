@@ -1,12 +1,22 @@
 -- Run this in Supabase Dashboard → SQL Editor after creating your project
 -- and enabling Email/Password auth.
 
--- users (extends auth.users or standalone; using standalone for clarity)
+-- users: id matches auth.users(id) from Supabase Auth; sync on signup
 create table if not exists public.users (
-  id uuid primary key default gen_random_uuid(),
-  email text not null unique,
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text not null,
+  experience_level text,
+  goal text,
   created_at timestamptz not null default now()
 );
+
+-- Allow users to insert/update their own row after signup
+create policy "Users can insert own profile" on public.users
+  for insert with check (auth.uid() = id);
+create policy "Users can update own profile" on public.users
+  for update using (auth.uid() = id);
+create policy "Users can read own profile" on public.users
+  for select using (auth.uid() = id);
 
 -- progress
 create table if not exists public.progress (

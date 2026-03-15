@@ -1,8 +1,31 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { OnboardingProvider } from './context/OnboardingContext';
+import Welcome from './pages/onboarding/Welcome';
+import Experience from './pages/onboarding/Experience';
+import Goal from './pages/onboarding/Goal';
+import Signup from './pages/onboarding/Signup';
+import SkillCheck from './pages/SkillCheck';
+import SkillCheckResults from './pages/SkillCheckResults';
+import Login from './pages/Login';
+import Home from './pages/Home';
+
 function App() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-blue-50">
-      <h1 className="text-4xl font-bold text-blue-600">Hello Vite + Tailwind!</h1>
-    </div>
+    <BrowserRouter>
+      <OnboardingProvider>
+        <Routes>
+          <Route path="/" element={<Welcome />} />
+          <Route path="/onboarding/experience" element={<Experience />} />
+          <Route path="/onboarding/goal" element={<Goal />} />
+          <Route path="/onboarding/signup" element={<Signup />} />
+          <Route path="/skill-check" element={<SkillCheck />} />
+          <Route path="/skill-check/results" element={<SkillCheckResults />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </OnboardingProvider>
+    </BrowserRouter>
   );
 }
 
