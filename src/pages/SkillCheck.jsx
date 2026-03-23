@@ -45,7 +45,13 @@ export default function SkillCheck() {
         },
       ]);
     } catch (err) {
-      setError(err.message || 'Could not get feedback');
+      const msg = err.message || '';
+      const isNetworkOrCors = /load failed|failed to fetch|network error|cors/i.test(msg) || msg === '';
+      setError(
+        isNetworkOrCors
+          ? "Couldn't reach the feedback service. Check your connection or try again."
+          : msg || 'Could not get feedback'
+      );
     } finally {
       setLoading(false);
     }

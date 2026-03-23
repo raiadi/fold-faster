@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { LEAK_LABELS } from '../data/skillCheckScenarios';
+import {
+  computeNewStreak,
+  getLevelFromXp,
+  XP_SESSION,
+  XP_ALL_CORRECT_BONUS,
+  XP_STREAK_7_MILESTONE,
+} from '../lib/progress';
 
 function getTopLeak(results) {
   const wrongByType = {};
@@ -50,6 +57,37 @@ export default function SkillCheckResults() {
             last_seen: new Date().toISOString(),
           });
         }
+
+        const nowIso = new Date().toISOString();
+        const { data: existing } = await supabase
+          .from('progress')
+          .select('xp, streak, last_active, current_module')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const prevXp = existing?.xp ?? 0;
+        const prevStreak = existing?.streak ?? 0;
+        const lastActive = existing?.last_active ?? null;
+        const newStreak = computeNewStreak(lastActive, prevStreak);
+
+        let xpEarned = XP_SESSION;
+        if (correctCount === total) xpEarned += XP_ALL_CORRECT_BONUS;
+        if (newStreak === 7 && (prevStreak === 6 || !lastActive)) xpEarned += XP_STREAK_7_MILESTONE;
+        const newXp = prevXp + xpEarned;
+        const { level } = getLevelFromXp(newXp);
+
+        await supabase.from('progress').upsert(
+          {
+            user_id: user.id,
+            xp: newXp,
+            streak: newStreak,
+            last_active: nowIso,
+            current_module: existing?.current_module ?? 'module_1',
+            level,
+          },
+          { onConflict: 'user_id' }
+        );
+
         if (!cancelled) setSaved(true);
       } catch {
         if (!cancelled) setSaved(true);
