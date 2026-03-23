@@ -8,6 +8,7 @@ import SkillCheck from './pages/SkillCheck';
 import SkillCheckResults from './pages/SkillCheckResults';
 import ModuleDrill from './pages/ModuleDrill';
 import ModuleDrillResults from './pages/ModuleDrillResults';
+import Paywall from './pages/Paywall';
 import Login from './pages/Login';
 import Home from './pages/Home';
 
@@ -24,6 +25,7 @@ function App() {
           <Route path="/skill-check/results" element={<SkillCheckResults />} />
           <Route path="/module/:moduleId" element={<ModuleDrill />} />
           <Route path="/module/:moduleId/results" element={<ModuleDrillResults />} />
+          <Route path="/paywall" element={<Paywall />} />
           <Route path="/login" element={<Login />} />
           <Route path="/home" element={<Home />} />
           <Route path="*" element={<Navigate to="/" replace />} />

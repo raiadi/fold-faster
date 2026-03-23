@@ -4,13 +4,16 @@ import { supabase } from '../lib/supabase';
 import { getLevelFromXp, getLevelProgressPct } from '../lib/progress';
 import { LEAK_LABELS } from '../data/skillCheckScenarios';
 import { MODULE_LABELS, MODULE_SCENARIO_COUNT } from '../data/modules';
+import { useSubscription, getTodaySessionCount } from '../lib/subscription';
 
 export default function Home() {
   const navigate = useNavigate();
   const [progress, setProgress] = useState(null);
   const [topLeaks, setTopLeaks] = useState([]);
   const [moduleCompletions, setModuleCompletions] = useState({});
+  const [todaySessions, setTodaySessions] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { isPro } = useSubscription();
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +54,9 @@ export default function Home() {
         const compMap = {};
         (completions || []).forEach((c) => { compMap[c.module_id] = c; });
         setModuleCompletions(compMap);
+
+        const count = await getTodaySessionCount(user.id);
+        if (!cancelled) setTodaySessions(count);
       } catch {
         if (!cancelled) setProgress({ xp: 0, streak: 0, level: 1, current_module: 'module_1' });
       } finally {
@@ -114,12 +120,21 @@ export default function Home() {
 
         {/* Today's training CTA */}
         <section>
-          <Link
-            to="/skill-check"
-            className="block w-full py-4 rounded-xl bg-brand-green text-brand-dark font-semibold text-center hover:opacity-90 active:scale-[0.98] transition"
-          >
-            Start today's drills
-          </Link>
+          {!isPro && todaySessions >= 3 ? (
+            <Link
+              to="/paywall"
+              className="block w-full py-4 rounded-xl bg-white/10 border border-white/20 text-white/70 font-semibold text-center hover:bg-white/15 transition"
+            >
+              Daily limit reached — Upgrade to continue
+            </Link>
+          ) : (
+            <Link
+              to="/skill-check"
+              className="block w-full py-4 rounded-xl bg-brand-green text-brand-dark font-semibold text-center hover:opacity-90 active:scale-[0.98] transition"
+            >
+              Start today's drills
+            </Link>
+          )}
         </section>
 
         {/* Top leaks */}
@@ -148,8 +163,27 @@ export default function Home() {
                 ? Math.round((bestCorrect / MODULE_SCENARIO_COUNT) * 100)
                 : 0;
               const label = MODULE_LABELS[`module_${mid}`];
+              const locked = mid > 1 && !isPro;
 
-              return (
+              return locked ? (
+                <Link
+                  key={mid}
+                  to="/paywall"
+                  className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-4 opacity-60 hover:opacity-80 transition"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium text-white/50">Module {mid}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-white/50 font-medium">
+                        Pro
+                      </span>
+                    </div>
+                    <p className="text-white font-medium text-sm truncate">{label}</p>
+                    <p className="text-white/40 text-xs mt-1">Unlock with Pro</p>
+                  </div>
+                  <span className="text-white/30 ml-3">🔒</span>
+                </Link>
+              ) : (
                 <Link
                   key={mid}
                   to={`/module/${mid}`}
@@ -183,17 +217,19 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Upgrade banner */}
-        <section className="rounded-xl border border-brand-green/50 bg-brand-green/10 p-4">
-          <p className="font-medium text-white">Unlock your full training path</p>
-          <p className="text-white/80 text-sm mt-1">Get all modules and unlimited drills.</p>
-          <Link
-            to="/paywall"
-            className="mt-3 inline-block text-sm font-medium text-brand-green hover:underline"
-          >
-            Upgrade →
-          </Link>
-        </section>
+        {/* Upgrade banner — only for free users */}
+        {!isPro && (
+          <section className="rounded-xl border border-brand-green/50 bg-brand-green/10 p-4">
+            <p className="font-medium text-white">Unlock your full training path</p>
+            <p className="text-white/80 text-sm mt-1">Get all modules and unlimited drills.</p>
+            <Link
+              to="/paywall"
+              className="mt-3 inline-block text-sm font-medium text-brand-green hover:underline"
+            >
+              Upgrade →
+            </Link>
+          </section>
+        )}
       </main>
     </div>
   );

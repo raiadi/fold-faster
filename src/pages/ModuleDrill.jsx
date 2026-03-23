@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { getModuleScenarios } from '../data/moduleScenarios';
 import { MODULE_LABELS } from '../data/modules';
 import { formatCard } from '../data/skillCheckScenarios';
+import { useSubscription } from '../lib/subscription';
+import { supabase } from '../lib/supabase';
+import { getTodaySessionCount } from '../lib/subscription';
 
 const DECISIONS = ['FOLD', 'CALL', 'RAISE'];
 
@@ -10,14 +13,48 @@ export default function ModuleDrill() {
   const { moduleId } = useParams();
   const mid = parseInt(moduleId, 10);
   const navigate = useNavigate();
+  const { isPro, loading: subLoading } = useSubscription();
 
   const scenarios = getModuleScenarios(mid);
   const moduleLabel = MODULE_LABELS[`module_${mid}`] || `Module ${mid}`;
 
   const [index, setIndex] = useState(0);
+  const [gateChecked, setGateChecked] = useState(false);
   const [results, setResults] = useState([]);
   const [chosen, setChosen] = useState(null); // decision the user picked
   const [revealed, setRevealed] = useState(false);
+
+  // Gate check: run once subscription status is known
+  useEffect(() => {
+    if (subLoading) return;
+    (async () => {
+      // Module 2+ requires Pro
+      if (mid > 1 && !isPro) {
+        navigate('/paywall', { replace: true });
+        return;
+      }
+      // Session limit: free users max 3/day
+      if (!isPro) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const count = await getTodaySessionCount(user.id);
+          if (count >= 3) {
+            navigate('/paywall', { replace: true });
+            return;
+          }
+        }
+      }
+      setGateChecked(true);
+    })();
+  }, [subLoading, isPro, mid, navigate]);
+
+  if (subLoading || !gateChecked) {
+    return (
+      <div className="min-h-screen bg-brand-dark flex items-center justify-center text-white">
+        <p className="text-white/50">Loading…</p>
+      </div>
+    );
+  }
 
   if (!scenarios.length) {
     return (

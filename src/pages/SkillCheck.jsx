@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   SKILL_CHECK_SCENARIOS,
@@ -6,6 +6,8 @@ import {
   LEAK_LABELS,
 } from '../data/skillCheckScenarios';
 import { getSkillCheckFeedback } from '../lib/claude';
+import { useSubscription, getTodaySessionCount } from '../lib/subscription';
+import { supabase } from '../lib/supabase';
 
 const DECISIONS = ['FOLD', 'CALL', 'RAISE'];
 
@@ -16,7 +18,35 @@ export default function SkillCheck() {
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [error, setError] = useState('');
+  const [gateChecked, setGateChecked] = useState(false);
   const navigate = useNavigate();
+  const { isPro, loading: subLoading } = useSubscription();
+
+  // Enforce free-tier session limit before starting
+  useEffect(() => {
+    if (subLoading) return;
+    (async () => {
+      if (!isPro) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const count = await getTodaySessionCount(user.id);
+          if (count >= 3) {
+            navigate('/paywall', { replace: true });
+            return;
+          }
+        }
+      }
+      setGateChecked(true);
+    })();
+  }, [subLoading, isPro, navigate]);
+
+  if (subLoading || !gateChecked) {
+    return (
+      <div className="min-h-screen bg-brand-dark flex items-center justify-center text-white">
+        <p className="text-white/50">Loading…</p>
+      </div>
+    );
+  }
 
   const scenario = SKILL_CHECK_SCENARIOS[index];
   const cardsStr = scenario.cards.map(formatCard).join(' ');
