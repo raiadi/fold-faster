@@ -17,6 +17,12 @@ export default function Welcome() {
       >
         Start free
       </Link>
+      <Link
+        to="/login"
+        className="mt-4 text-sm text-white/60 hover:text-white/90 transition"
+      >
+        Already have an account? Log in
+      </Link>
     </div>
   );
 }

@@ -70,6 +70,7 @@ Deno.serve(async (req) => {
 
     if (!stripeRes.ok) {
       const err = await stripeRes.json().catch(() => ({}));
+      console.error('Stripe error:', JSON.stringify(err));
       const message = err.error?.message || stripeRes.statusText || 'Stripe error';
       return new Response(
         JSON.stringify({ error: message }),
