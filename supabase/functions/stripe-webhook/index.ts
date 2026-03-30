@@ -92,8 +92,9 @@ Deno.serve(async (req) => {
       const customerId = obj.customer as string;
       const subscriptionId = obj.subscription as string;
 
+      console.log('checkout.session.completed:', { userId, customerId, subscriptionId });
       if (userId && customerId) {
-        await supabase.from('subscriptions').upsert(
+        const { error: upsertError } = await supabase.from('subscriptions').upsert(
           {
             user_id: userId,
             status: 'trialing',
@@ -103,6 +104,10 @@ Deno.serve(async (req) => {
           },
           { onConflict: 'user_id' }
         );
+        if (upsertError) console.error('Upsert error:', JSON.stringify(upsertError));
+        else console.log('Subscription upserted successfully for user:', userId);
+      } else {
+        console.warn('Missing userId or customerId, skipping upsert');
       }
     } else if (eventType === 'customer.subscription.created' || eventType === 'customer.subscription.updated') {
       const customerId = obj.customer as string;
