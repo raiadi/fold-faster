@@ -10,15 +10,18 @@ export function useSubscription() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      console.log('[sub] user:', user?.id, 'token:', !!session?.access_token);
       if (!user) { if (!cancelled) setLoading(false); return; }
 
-      const { data } = await supabase
+      const { data, error: subError } = await supabase
         .from('subscriptions')
         .select('status')
         .eq('user_id', user.id)
         .maybeSingle();
 
+      console.log('[sub] data:', data, 'error:', subError?.message);
       if (!cancelled) {
         setIsPro(['active', 'trialing'].includes(data?.status ?? ''));
         setLoading(false);
