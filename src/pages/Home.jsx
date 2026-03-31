@@ -5,12 +5,14 @@ import { getLevelFromXp, getLevelProgressPct } from '../lib/progress';
 import { LEAK_LABELS } from '../data/skillCheckScenarios';
 import { MODULE_LABELS, MODULE_SCENARIO_COUNT } from '../data/modules';
 import { useSubscription, getTodaySessionCount } from '../lib/subscription';
+import { getModuleProgress } from '../lib/moduleProgress';
 
 export default function Home() {
   const navigate = useNavigate();
   const [progress, setProgress] = useState(null);
   const [topLeaks, setTopLeaks] = useState([]);
   const [moduleCompletions, setModuleCompletions] = useState({});
+  const [extraModuleProgress, setExtraModuleProgress] = useState({});
   const [todaySessions, setTodaySessions] = useState(0);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -61,6 +63,9 @@ export default function Home() {
         (completions || []).forEach((c) => { compMap[c.module_id] = c; });
         setModuleCompletions(compMap);
 
+        const extras = await getModuleProgress(supabase, [10, 11, 12, 20]);
+        if (!cancelled) setExtraModuleProgress(extras);
+
         const count = await getTodaySessionCount(user.id);
         if (!cancelled) setTodaySessions(count);
       } catch {
@@ -85,9 +90,10 @@ export default function Home() {
   const { name: levelName, xpToNext } = getLevelFromXp(xp);
   const levelPct = getLevelProgressPct(xp);
   const positionsComplete =
-    localStorage.getItem('positions_early_complete') === 'true'
-    && localStorage.getItem('positions_middle_complete') === 'true'
-    && localStorage.getItem('positions_late_complete') === 'true';
+    Boolean(extraModuleProgress[10]?.completed)
+    && Boolean(extraModuleProgress[11]?.completed)
+    && Boolean(extraModuleProgress[12]?.completed);
+  const handRankingsComplete = Boolean(extraModuleProgress[20]?.completed);
   return (
     <div className="min-h-screen bg-brand-dark text-white flex flex-col pb-8">
       {/* Top bar */}
@@ -204,6 +210,11 @@ export default function Home() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-medium text-white/50">🃏 Hand Rankings</span>
+                  {handRankingsComplete && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-brand-green/20 text-brand-green font-medium">
+                      ✅
+                    </span>
+                  )}
                 </div>
                 <p className="text-white font-medium text-sm truncate">Learn which hands beat which</p>
               </div>

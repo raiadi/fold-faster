@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PokerTable from '../components/PokerTable';
 import { POSITIONS_DATA } from '../data/positionsData';
+import { supabase } from '../lib/supabase';
+import { getModuleProgress, saveModuleProgress } from '../lib/moduleProgress';
 
 const CONFIDENCE_KEY = 'positions_confidence_done';
-const SECTION_KEYS = {
-  early: 'positions_early_complete',
-  middle: 'positions_middle_complete',
-  late: 'positions_late_complete',
+const SECTION_MODULE_IDS = {
+  early: 10,
+  middle: 11,
+  late: 12,
 };
 
 const SECTION_META = {
@@ -61,15 +63,22 @@ export default function PositionsModule() {
   const [lastScore, setLastScore] = useState(null);
   const [resultSaved, setResultSaved] = useState(false);
 
+  const refreshSectionCompletion = async () => {
+    const progressByModule = await getModuleProgress(supabase, [10, 11, 12]);
+    setSectionCompletion({
+      early: Boolean(progressByModule[10]?.completed),
+      middle: Boolean(progressByModule[11]?.completed),
+      late: Boolean(progressByModule[12]?.completed),
+    });
+  };
+
   useEffect(() => {
     const confidenceDone = localStorage.getItem(CONFIDENCE_KEY) === 'true';
-    const completionState = {
-      early: localStorage.getItem(SECTION_KEYS.early) === 'true',
-      middle: localStorage.getItem(SECTION_KEYS.middle) === 'true',
-      late: localStorage.getItem(SECTION_KEYS.late) === 'true',
-    };
-    setSectionCompletion(completionState);
     setView(confidenceDone ? 'sections' : 'confidence');
+
+    (async () => {
+      await refreshSectionCompletion();
+    })();
   }, []);
 
   const currentQuestion = questions[index];
@@ -142,11 +151,14 @@ export default function PositionsModule() {
   useEffect(() => {
     if (view !== 'results' || resultSaved || lastScore === null) return;
 
-    if (lastScore >= 9) {
-      localStorage.setItem(SECTION_KEYS[activeSection], 'true');
-      setSectionCompletion((prev) => ({ ...prev, [activeSection]: true }));
-    }
-    setResultSaved(true);
+    (async () => {
+      if (lastScore >= 9) {
+        const moduleId = SECTION_MODULE_IDS[activeSection];
+        await saveModuleProgress(supabase, moduleId, lastScore, 10);
+      }
+      await refreshSectionCompletion();
+      setResultSaved(true);
+    })();
   }, [activeSection, lastScore, resultSaved, view]);
 
   const sectionOrder = ['early', 'middle', 'late'];

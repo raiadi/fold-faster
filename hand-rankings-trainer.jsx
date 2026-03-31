@@ -1,5 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "./src/lib/supabase";
+import { getModuleProgress, saveModuleProgress } from "./src/lib/moduleProgress";
 
 const SUITS = ["♠", "♥", "♦", "♣"];
 const SUIT_COLORS = { "♠": "#1a1a2e", "♥": "#c0392b", "♦": "#c0392b", "♣": "#1a1a2e" };
@@ -330,6 +332,15 @@ export default function HandRankingsTrainer() {
   // Phase tracking
   const [phase, setPhase] = useState(1);
   const [tierScores, setTierScores] = useState({});
+  const [moduleComplete, setModuleComplete] = useState(false);
+  const [phase2Saved, setPhase2Saved] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const progressByModule = await getModuleProgress(supabase, [20]);
+      setModuleComplete(Boolean(progressByModule[20]?.completed));
+    })();
+  }, []);
 
   const generatePhase1Question = useCallback((t) => {
     const tierTypes = TIER_CONFIG[t].types;
@@ -364,6 +375,7 @@ export default function HandRankingsTrainer() {
     setTotalCorrect(0);
     setTotalQuestions(0);
     setTierScores({});
+    setPhase2Saved(false);
     setScreen("phase1");
     generatePhase1Question(1);
   };
@@ -372,6 +384,7 @@ export default function HandRankingsTrainer() {
     setPhase(2);
     setQuestionNum(0);
     setScore(0);
+    setPhase2Saved(false);
     setScreen("phase2");
     generatePhase2Question();
   };
@@ -435,6 +448,16 @@ export default function HandRankingsTrainer() {
 
   const p2Winner = HAND_RANK[hand1.type] > HAND_RANK[hand2.type] ? 1 : 2;
 
+  useEffect(() => {
+    if (screen !== "phase2result" || phase2Saved || totalQuestions === 0) return;
+    (async () => {
+      await saveModuleProgress(supabase, 20, totalCorrect, totalQuestions);
+      const progressByModule = await getModuleProgress(supabase, [20]);
+      setModuleComplete(Boolean(progressByModule[20]?.completed));
+      setPhase2Saved(true);
+    })();
+  }, [phase2Saved, screen, totalCorrect, totalQuestions]);
+
   // ─── Screens ───
 
   if (screen === "menu") {
@@ -446,6 +469,9 @@ export default function HandRankingsTrainer() {
             <div style={styles.icon}>🃏</div>
             <h1 style={styles.title}>Hand Rankings</h1>
             <p style={styles.subtitle}>Learn to identify and compare poker hands</p>
+            {moduleComplete && (
+              <p style={styles.completeBadge}>✅ Complete</p>
+            )}
           </div>
 
           <div style={styles.moduleCard}>
@@ -721,6 +747,14 @@ const styles = {
     letterSpacing: -0.5,
   },
   subtitle: { fontSize: 14, color: "#7f8c8d", margin: 0 },
+  completeBadge: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#2ecc71",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
   moduleCard: {
     background: "rgba(255,255,255,0.04)",
     border: "1px solid rgba(255,255,255,0.08)",
