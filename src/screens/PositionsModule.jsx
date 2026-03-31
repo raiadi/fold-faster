@@ -296,8 +296,7 @@ export default function PositionsModule() {
             ) : (
               <>
                 <p className="text-lg font-semibold mb-3">
-                  <span className="text-[#22c55e]">{currentQuestion.positionName}</span> is highlighted — what
-                  position is this?
+                  A position is highlighted — what position is this?
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {modeBOptions.map((option) => {

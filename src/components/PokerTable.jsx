@@ -15,7 +15,7 @@ export default function PokerTable({
 
   const centerX = DEFAULT_CONTAINER_WIDTH / 2;
   const centerY = DEFAULT_CONTAINER_HEIGHT / 2;
-  const radius = 82;
+  const radius = 95;
 
   const seats = Array.from({ length: seatCount }, (_, index) => {
     const angle = (index / seatCount) * 2 * Math.PI - Math.PI / 2;
