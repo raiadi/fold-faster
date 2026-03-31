@@ -14,3 +14,4 @@ dist/
 *.log
 .vscode/
 .idea/
+.vercel

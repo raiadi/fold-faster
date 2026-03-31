@@ -1,0 +1,39 @@
+---
+description: Fold Faster project source-of-truth docs, design/copy constraints, security, and workflow for non-trivial tasks.
+alwaysApply: true
+---
+
+# Fold Faster — project rules
+
+## Source of truth
+
+Always align implementation with these docs (read them before substantive work):
+
+- `docs/PRD.md` — product requirements
+- `docs/ARCHITECTURE.md` — technical architecture
+- `docs/MILESTONES.md` — scope and sequencing
+- `docs/COPY_GUIDE.md` — when writing or changing UI copy
+
+If something conflicts with the PRD or milestone scope, call it out before building.
+
+## Core rules
+
+- Build only within the **current milestone** scope (`docs/MILESTONES.md`).
+- Do **not** expand beyond the PRD without **flagging** the gap and getting explicit direction.
+- **UI:** mobile-first; design and verify at **390px** width.
+- **Design system:** keep the existing **dark navy + green** palette and patterns (`#0f1923` background, `#22c55e` accent per product brief).
+- **Copy:** plain English for **beginner** poker players; avoid advanced poker jargon (or explain terms if unavoidable).
+- **Code:** keep components **small and readable**; prefer **simple** solutions over clever abstractions.
+- **Security:** never expose **secrets** in frontend code; keep **AI and payment** logic **server-side** (e.g. Supabase Edge Functions, not client env for secrets).
+- **UX:** preserve or improve **loading**, **empty**, and **error** states.
+- **Refactors:** avoid **broad** refactors unless the user explicitly asks.
+
+## Non-trivial tasks — workflow
+
+For each non-trivial task, follow this order:
+
+1. Read the **relevant** docs above.
+2. **Summarize** which files you expect to change.
+3. **State assumptions** explicitly.
+4. Implement the **smallest working** solution that fits scope.
+5. Provide **manual test steps** (what to click/check, including mobile width if UI changed).

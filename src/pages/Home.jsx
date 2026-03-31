@@ -84,6 +84,10 @@ export default function Home() {
   const streak = progress?.streak ?? 0;
   const { name: levelName, xpToNext } = getLevelFromXp(xp);
   const levelPct = getLevelProgressPct(xp);
+  const positionsComplete =
+    localStorage.getItem('positions_early_complete') === 'true'
+    && localStorage.getItem('positions_middle_complete') === 'true'
+    && localStorage.getItem('positions_late_complete') === 'true';
   return (
     <div className="min-h-screen bg-brand-dark text-white flex flex-col pb-8">
       {/* Top bar */}
@@ -175,6 +179,37 @@ export default function Home() {
         <section>
           <h2 className="font-semibold text-white mb-3">Training modules</h2>
           <div className="space-y-3">
+            <Link
+              to="/module/positions"
+              className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-4 hover:bg-white/10 transition"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-medium text-white/50">🪑 Positions</span>
+                  {positionsComplete && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-brand-green/20 text-brand-green font-medium">
+                      ✅
+                    </span>
+                  )}
+                </div>
+                <p className="text-white font-medium text-sm truncate">Learn where you&apos;re sitting at the table</p>
+              </div>
+              <span className="text-white/30 ml-3">›</span>
+            </Link>
+
+            <Link
+              to="/module/hand-rankings"
+              className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-4 hover:bg-white/10 transition"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-medium text-white/50">🃏 Hand Rankings</span>
+                </div>
+                <p className="text-white font-medium text-sm truncate">Learn which hands beat which</p>
+              </div>
+              <span className="text-white/30 ml-3">›</span>
+            </Link>
+
             {[1, 2, 3, 4].map((mid) => {
               const comp = moduleCompletions[mid];
               const bestCorrect = comp?.best_correct ?? 0;
@@ -212,6 +247,11 @@ export default function Home() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-medium text-white/50">Module {mid}</span>
+                      {!isPro && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-white/50 font-medium">
+                          🔒 Pro
+                        </span>
+                      )}
                       {completed && (
                         <span className="text-xs px-1.5 py-0.5 rounded bg-brand-green/20 text-brand-green font-medium">
                           Complete

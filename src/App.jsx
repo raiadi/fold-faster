@@ -11,6 +11,9 @@ import ModuleDrillResults from './pages/ModuleDrillResults';
 import Paywall from './pages/Paywall';
 import Login from './pages/Login';
 import Home from './pages/Home';
+import PokerTable from './components/PokerTable';
+import PositionsModule from './screens/PositionsModule';
+import HandRankingsTrainer from '../hand-rankings-trainer';
 
 function App() {
   return (
@@ -25,9 +28,19 @@ function App() {
           <Route path="/skill-check/results" element={<SkillCheckResults />} />
           <Route path="/module/:moduleId" element={<ModuleDrill />} />
           <Route path="/module/:moduleId/results" element={<ModuleDrillResults />} />
+          <Route path="/module/positions" element={<PositionsModule />} />
+          <Route path="/module/hand-rankings" element={<HandRankingsTrainer />} />
           <Route path="/paywall" element={<Paywall />} />
           <Route path="/login" element={<Login />} />
           <Route path="/home" element={<Home />} />
+          <Route
+            path="/dev/poker-table"
+            element={(
+              <div className="min-h-screen bg-brand-dark flex items-center justify-center px-4">
+                <PokerTable playerCount={6} dealerIndex={0} bigBlindIndex={2} />
+              </div>
+            )}
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </OnboardingProvider>
