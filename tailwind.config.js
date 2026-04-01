@@ -2,6 +2,7 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+    "./hand-rankings-trainer.jsx",
   ],
   theme: {
     extend: {

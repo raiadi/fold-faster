@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PokerTable from '../components/PokerTable';
+import PositionChartOverlay from '../components/PositionChartOverlay';
 import { POSITIONS_DATA } from '../data/positionsData';
 import { supabase } from '../lib/supabase';
 import { getModuleProgress, saveModuleProgress } from '../lib/moduleProgress';
@@ -62,6 +63,7 @@ export default function PositionsModule() {
   const [selectedOption, setSelectedOption] = useState('');
   const [lastScore, setLastScore] = useState(null);
   const [resultSaved, setResultSaved] = useState(false);
+  const [showPosChart, setShowPosChart] = useState(false);
 
   const refreshSectionCompletion = async () => {
     const progressByModule = await getModuleProgress(supabase, [10, 11, 12]);
@@ -165,6 +167,7 @@ export default function PositionsModule() {
   const nextSection = sectionOrder[sectionOrder.indexOf(activeSection) + 1] || null;
 
   return (
+    <>
     <div className="min-h-screen bg-[#0f1923] text-white px-4 pt-6 pb-8">
       <button
         type="button"
@@ -380,6 +383,19 @@ export default function PositionsModule() {
         </section>
       )}
     </div>
+
+    <button
+      type="button"
+      onClick={() => setShowPosChart(true)}
+      className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-green-600 text-xl shadow-lg"
+      aria-label="Open table positions chart"
+    >
+      📊
+    </button>
+    {showPosChart && (
+      <PositionChartOverlay onClose={() => setShowPosChart(false)} />
+    )}
+    </>
   );
 }
 

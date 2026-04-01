@@ -1,7 +1,190 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import PlayingCard from "./src/components/PlayingCard.jsx";
 import { supabase } from "./src/lib/supabase";
 import { getModuleProgress, saveModuleProgress } from "./src/lib/moduleProgress";
+
+/** Representative example hands for the reference chart (PlayingCard rank + suit keys). */
+const HAND_RANKINGS_CHART_ROWS = [
+  {
+    num: 1,
+    name: "Royal Flush",
+    example: "A♥ K♥ Q♥ J♥ T♥",
+    cards: [
+      { rank: "A", suit: "h" },
+      { rank: "K", suit: "h" },
+      { rank: "Q", suit: "h" },
+      { rank: "J", suit: "h" },
+      { rank: "T", suit: "h" },
+    ],
+  },
+  {
+    num: 2,
+    name: "Straight Flush",
+    example: "J♠ T♠ 9♠ 8♠ 7♠",
+    cards: [
+      { rank: "J", suit: "s" },
+      { rank: "T", suit: "s" },
+      { rank: "9", suit: "s" },
+      { rank: "8", suit: "s" },
+      { rank: "7", suit: "s" },
+    ],
+  },
+  {
+    num: 3,
+    name: "Four of a Kind",
+    example: "9♥ 9♦ 9♣ 9♠ K♥",
+    cards: [
+      { rank: "9", suit: "h" },
+      { rank: "9", suit: "d" },
+      { rank: "9", suit: "c" },
+      { rank: "9", suit: "s" },
+      { rank: "K", suit: "h" },
+    ],
+  },
+  {
+    num: 4,
+    name: "Full House",
+    example: "A♥ A♦ A♣ 3♥ 3♦",
+    cards: [
+      { rank: "A", suit: "h" },
+      { rank: "A", suit: "d" },
+      { rank: "A", suit: "c" },
+      { rank: "3", suit: "h" },
+      { rank: "3", suit: "d" },
+    ],
+  },
+  {
+    num: 5,
+    name: "Flush",
+    example: "K♥ T♥ 8♥ 5♥ 2♥",
+    cards: [
+      { rank: "K", suit: "h" },
+      { rank: "T", suit: "h" },
+      { rank: "8", suit: "h" },
+      { rank: "5", suit: "h" },
+      { rank: "2", suit: "h" },
+    ],
+  },
+  {
+    num: 6,
+    name: "Straight",
+    example: "T♣ 9♠ 8♦ 7♥ 6♣",
+    cards: [
+      { rank: "T", suit: "c" },
+      { rank: "9", suit: "s" },
+      { rank: "8", suit: "d" },
+      { rank: "7", suit: "h" },
+      { rank: "6", suit: "c" },
+    ],
+  },
+  {
+    num: 7,
+    name: "Three of a Kind",
+    example: "7♥ 7♦ 7♣ Q♠ 3♥",
+    cards: [
+      { rank: "7", suit: "h" },
+      { rank: "7", suit: "d" },
+      { rank: "7", suit: "c" },
+      { rank: "Q", suit: "s" },
+      { rank: "3", suit: "h" },
+    ],
+  },
+  {
+    num: 8,
+    name: "Two Pair",
+    example: "J♥ J♦ 5♣ 5♠ 7♥",
+    cards: [
+      { rank: "J", suit: "h" },
+      { rank: "J", suit: "d" },
+      { rank: "5", suit: "c" },
+      { rank: "5", suit: "s" },
+      { rank: "7", suit: "h" },
+    ],
+  },
+  {
+    num: 9,
+    name: "Pair",
+    example: "A♥ A♦ J♣ 8♠ 2♥",
+    cards: [
+      { rank: "A", suit: "h" },
+      { rank: "A", suit: "d" },
+      { rank: "J", suit: "c" },
+      { rank: "8", suit: "s" },
+      { rank: "2", suit: "h" },
+    ],
+  },
+  {
+    num: 10,
+    name: "High Card",
+    example: "K♥ Q♦ 8♣ 4♠ 2♥",
+    cards: [
+      { rank: "K", suit: "h" },
+      { rank: "Q", suit: "d" },
+      { rank: "8", suit: "c" },
+      { rank: "4", suit: "s" },
+      { rank: "2", suit: "h" },
+    ],
+  },
+];
+
+function handRankingRowBg(index) {
+  if (index === 0) return "bg-yellow-900/20";
+  return (index + 1) % 2 === 0 ? "bg-gray-950" : "bg-gray-900";
+}
+
+function HandRankingsReferenceOverlay({ onClose }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-gray-950 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="hand-rankings-chart-title"
+    >
+      <header className="sticky top-0 z-10 flex items-start justify-between border-b border-gray-800 bg-[#0f1923] px-4 py-3">
+        <div>
+          <h2 id="hand-rankings-chart-title" className="text-lg font-bold text-white">
+            Hand Rankings
+          </h2>
+          <p className="text-sm text-gray-400">Best → Worst</p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-2xl leading-none text-white/80 hover:text-white px-2 py-1"
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </header>
+
+      <div className="mx-auto max-w-lg px-2 pb-10 pt-2">
+        {HAND_RANKINGS_CHART_ROWS.map((row, index) => (
+          <div
+            key={row.num}
+            className={`flex items-center gap-3 border-b border-gray-800 py-3 ${handRankingRowBg(index)}`}
+          >
+            <div
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white"
+              aria-hidden
+            >
+              {row.num}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white">{row.name}</p>
+              <p className="text-xs text-gray-400">{row.example}</p>
+            </div>
+            <div className="flex shrink-0 gap-0.5">
+              {row.cards.map((c, i) => (
+                <PlayingCard key={i} rank={c.rank} suit={c.suit} size="sm" />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const SUITS = ["♠", "♥", "♦", "♣"];
 const SUIT_COLORS = { "♠": "#1a1a2e", "♥": "#c0392b", "♦": "#c0392b", "♣": "#1a1a2e" };
@@ -334,6 +517,7 @@ export default function HandRankingsTrainer() {
   const [tierScores, setTierScores] = useState({});
   const [moduleComplete, setModuleComplete] = useState(false);
   const [phase2Saved, setPhase2Saved] = useState(false);
+  const [showHandChart, setShowHandChart] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -460,6 +644,7 @@ export default function HandRankingsTrainer() {
 
   // ─── Screens ───
 
+  const renderScreen = () => {
   if (screen === "menu") {
     return (
       <div style={styles.container}>
@@ -709,6 +894,24 @@ export default function HandRankingsTrainer() {
   }
 
   return null;
+  };
+
+  return (
+    <>
+      {renderScreen()}
+      <button
+        type="button"
+        onClick={() => setShowHandChart(true)}
+        className="fixed bottom-6 right-6 z-40 w-12 h-12 bg-green-600 rounded-full flex items-center justify-center shadow-lg text-xl"
+        aria-label="Open hand rankings reference"
+      >
+        📊
+      </button>
+      {showHandChart && (
+        <HandRankingsReferenceOverlay onClose={() => setShowHandChart(false)} />
+      )}
+    </>
+  );
 }
 
 const styles = {
