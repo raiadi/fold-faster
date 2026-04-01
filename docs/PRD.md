@@ -1,7 +1,7 @@
 # Fold Faster — Product Requirements Document
 
-> **Version:** 1.0 | **Status:** 🧪 Testing | **Last Updated:** March 2026
-> **Owner:** Sayog UK | **Repo:** github.com/raiadi/fold-faster | **Domain:** TBD
+> **Version:** 1.7.0 | **Status:** 🚀 Pre-launch prep | **Last Updated:** 1 Apr 2026
+> **Owner:** Sayog UK | **Domain:** fold-faster.vercel.app (custom TBD) | **Repo:** github.com/raiadi/fold-faster
 
 ---
 
@@ -16,8 +16,8 @@ habit loop that makes practice feel like a game.
 "The fastest way for new Hold'em players to stop making obvious mistakes."
 
 ### One-Line Summary
-Short daily drills that teach beginners what hands to play, how position works,
-and when to fold — with instant plain-English AI feedback.
+Short daily drills that teach beginners positions, hand rankings, game flow, and
+which hands to play — with instant plain-English AI feedback.
 
 ### What This Is NOT
 - NOT a GTO solver
@@ -30,14 +30,10 @@ and when to fold — with instant plain-English AI feedback.
 
 ## 2. Problem Statement
 
-New poker players who know the rules still lose because they don't know:
-- Which hands to play
-- How position changes decisions
-- When to bet / check / call / fold
-- How to avoid obvious beginner mistakes
-
-Free content exists but is fragmented and passive. Existing training products skew
-toward broader libraries, GTO study, or serious players — creating a gap for
+New poker players who know the rules still lose because they don't know which hands
+to play, how position changes decisions, when to fold, and how to avoid obvious
+beginner mistakes. Free content exists but is fragmented and passive. Existing
+training products skew toward GTO study or serious players — creating a gap for
 something simpler and more habit-forming for beginners.
 
 ---
@@ -59,39 +55,40 @@ something simpler and more habit-forming for beginners.
 - Overvalues weak hands
 - Knows they're making mistakes, but not exactly which ones
 
-### Do NOT Target
-- Complete non-players
-- Advanced grinders
-- Tournament specialists
-- Omaha players
-
 ---
 
 ## 4. Business Model
 
-| Tier | Price       | Limits                                                        |
-|------|-------------|---------------------------------------------------------------|
-| Free | £0          | 3 sessions/day, Module 1 only, basic leak tracking            |
-| Pro  | £8.99/month | Unlimited sessions, all 4 modules, full leak history          |
+| Tier | Price | Limits |
+|------|-------|--------|
+| Free | £0 | 3 full module runs/module/day |
+| Pro  | £8.99/month | Unlimited runs, all content |
 
-- **Trial:** 7-day free trial on Pro (no charge for 7 days, cancel any time)
-- **Payment:** Stripe Checkout
-- **Stripe Account:** sayog.team@gmail.com | FoldFaster | Sayog UK
-- **Stripe Product ID:** prod_UCi4pd94ipkSLF
-- **Stripe Price ID:** price_1TEIe7QfNxIoy1zgLNXTJIjb
+**Trial:** 7-day free trial on Pro (no charge for 7 days, cancel any time)
+**Payment:** Stripe Checkout
+**Stripe Account:** sayog.team@gmail.com | FoldFaster | Sayog UK
+**Stripe Product ID:** prod_UCi4pd94ipkSLF
+**Stripe Price ID:** price_1TEIe7QfNxIoy1zgLNXTJIjb
+
+### Free Tier Gating
+- 3 full module runs per module per day (implemented in src/lib/runLimits.js)
+- A "run" = one complete section session
+- Ranges module: unlimited for all users (infinite variety)
+- RunLimitModal shown on limit hit — never redirects, always modal
+- Pro/trialing users: never gated
 
 ---
 
 ## 5. Tech Stack
 
-| Layer            | Technology                                      |
-|------------------|-------------------------------------------------|
-| Frontend         | React + Vite + Tailwind CSS                     |
-| Auth + Database  | Supabase                                        |
-| AI Feedback      | Anthropic Claude API (claude-sonnet-4-20250514) |
-| Payments         | Stripe Checkout + Webhooks                      |
-| Hosting          | Vercel (domain TBD)                             |
-| Edge Functions   | Supabase Edge Functions (Deno/TypeScript)       |
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React + Vite + Tailwind CSS |
+| Auth + Database | Supabase |
+| AI Feedback | Anthropic Claude API (claude-sonnet-4-20250514) — server-side only |
+| Payments | Stripe Checkout + Webhooks |
+| Hosting | Vercel (fold-faster.vercel.app) |
+| Edge Functions | Supabase Edge Functions (Deno/TypeScript) |
 
 ### Design System
 - Background: `#0f1923` (dark navy)
@@ -101,309 +98,233 @@ something simpler and more habit-forming for beginners.
 
 ### Environment Variables
 
-#### Frontend (.env)
+**Frontend / Vercel**
 ```
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-VITE_ANTHROPIC_API_KEY=       # ⚠️ move server-side before launch
-VITE_STRIPE_PUBLIC_KEY=
+VITE_SUPABASE_URL=https://rcpclbtojfxvapuedwrz.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...   (JWT format)
+VITE_STRIPE_PUBLIC_KEY=pk_live_...
+# VITE_ANTHROPIC_API_KEY — REMOVED. Server-side via Edge Function.
 ```
 
-#### Supabase Secrets (server-side)
+**Supabase Secrets**
 ```
-STRIPE_SECRET_KEY=
-STRIPE_PRICE_ID=
-STRIPE_WEBHOOK_SECRET=
-SITE_URL=
-ANTHROPIC_API_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_PRICE_ID=price_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+SITE_URL=https://fold-faster.vercel.app
+ANTHROPIC_API_KEY=sk-ant-...
+SUPABASE_SERVICE_ROLE_KEY=...
 ```
 
 ---
 
 ## 6. Database Schema
 
-### users
-| Column           | Type      | Notes                                              |
-|------------------|-----------|----------------------------------------------------|
-| id               | uuid, PK  |                                                    |
-| email            | text      |                                                    |
-| experience_level | text      | 'losing' \| 'beginner' \| 'regular'               |
-| goal             | text      | 'starting_hands' \| 'position' \| 'stop_bad_calls' \| 'confidence' |
-| created_at       | timestamp |                                                    |
+### module_completions (key table for new modules)
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid, PK | |
+| user_id | uuid, FK | |
+| module_id | integer | See map below |
+| best_correct | integer | |
+| completed | boolean | |
+| | | UNIQUE (user_id, module_id) |
 
-### progress
-| Column         | Type           | Notes                              |
-|----------------|----------------|------------------------------------|
-| id             | uuid, PK       |                                    |
-| user_id        | uuid, FK       |                                    |
-| xp             | integer        | default 0                          |
-| streak         | integer        | default 0                          |
-| last_active    | date           |                                    |
-| current_module | integer        | default 1                          |
-| level          | text           | 'bronze' \| 'silver' \| 'gold'    |
-
-### sessions
-| Column              | Type      | Notes |
-|---------------------|-----------|-------|
-| id                  | uuid, PK  |       |
-| user_id             | uuid, FK  |       |
-| scenarios_completed | integer   |       |
-| correct_count       | integer   |       |
-| created_at          | timestamp |       |
-
-### leaks
-| Column    | Type      | Notes                                                                   |
-|-----------|-----------|-------------------------------------------------------------------------|
-| id        | uuid, PK  |                                                                         |
-| user_id   | uuid, FK  |                                                                         |
-| leak_type | text      | 'loose_preflop' \| 'position_error' \| 'overcalling' \| 'overplaying' |
-| frequency | integer   | default 1                                                               |
-| last_seen | timestamp |                                                                         |
-
-### module_completions
-| Column       | Type     | Notes                          |
-|--------------|----------|--------------------------------|
-| id           | uuid, PK |                                |
-| user_id      | uuid, FK |                                |
-| module_id    | integer  |                                |
-| best_correct | integer  |                                |
-| completed    | boolean  |                                |
-|              |          | UNIQUE (user_id, module_id)    |
+**module_id map:**
+- 10 = Positions: Early
+- 11 = Positions: Middle
+- 12 = Positions: Late
+- 20 = Hand Rankings
+- 30 = Ranges: Early
+- 31 = Ranges: Middle
+- 32 = Ranges: Late
+- 40 = Game Flow
 
 ### subscriptions
-| Column                | Type      | Notes                                          |
-|-----------------------|-----------|------------------------------------------------|
-| id                    | uuid, PK  |                                                |
-| user_id               | uuid, FK  |                                                |
-| status                | text      | 'active' \| 'cancelled' \| 'trialing' \| 'past_due' |
-| stripe_customer_id    | text      |                                                |
-| stripe_subscription_id| text      |                                                |
-| plan                  | text      |                                                |
-| current_period_end    | timestamp |                                                |
-| created_at            | timestamp |                                                |
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid, PK | |
+| user_id | uuid, FK | UNIQUE constraint added 31 Mar 2026 |
+| status | text | active / trialing / cancelled / past_due |
+| stripe_customer_id | text | |
+| stripe_subscription_id | text | |
+| plan | text | |
+| current_period_end | timestamp | |
+| created_at | timestamp | |
+
+Full schema for users, progress, sessions, leaks unchanged from v1.0.
 
 ---
 
 ## 7. Feature Specifications
 
-### 7.1 Onboarding Flow ✅ BUILT
-4-screen flow:
-1. **Welcome** — headline, tagline, "Start free" CTA
-2. **Experience Level** — 3 selectable cards
-3. **Goal Selection** — 4 selectable cards
-4. **Auth** — email/password signup + login path
-
-On signup: save experience + goal to Supabase → redirect to skill check.
+### 7.1 Onboarding ✅ BUILT
+- 4-screen flow: Welcome → Experience Level → Goal → Auth
+- "Already have an account? Log in" link on Welcome screen
+- On signup: saves experience + goal → redirects to skill check
 
 ### 7.2 Skill Check ✅ BUILT
-- 8 preflop scenarios shown one at a time
-- Each shows: hole cards, position, action context
-- Answer buttons: Fold / Call / Raise
-- Claude API feedback after each answer (2–3 sentences, plain English)
-- Results screen: score + top leak identified
-- Saves baseline score + leak type to Supabase
+- 8 preflop scenarios (Fold / Call / Raise)
+- AI feedback via `skill-check-feedback` Edge Function
+- Results: score + top leak saved to Supabase
 
-### 7.3 Training Modules ✅ BUILT
-4 modules × 15 scenarios = 60 total (src/data/moduleScenarios.js)
+### 7.3 Foundational Modules ✅ ALL BUILT
 
-| Module | Topic                  | Scenarios |
-|--------|------------------------|-----------|
-| 1      | Starting Hands Basics  | 15        |
-| 2      | Position Basics        | 15        |
-| 3      | Facing a Raise         | 15        |
-| 4      | Beginner Traps         | 15        |
+**Module order:** Positions (1) → Hand Rankings (2) → Game Flow (3) → Ranges (4)
 
-- Completion threshold: 12/15 correct → module marked complete
-- Unlocks next module automatically
-- Saves completion to module_completions via upsert
+| # | Module | module_ids | Questions | Threshold |
+|---|--------|-----------|-----------|-----------|
+| 1 | Positions | 10, 11, 12 | 50/section, 10/session | 90% |
+| 2 | Hand Rankings | 20 | 15/tier × 3 + 20 Phase 2 | 90% |
+| 3 | Game Flow | 40 | 50 hands, 10/session | 90% |
+| 4 | Ranges | 30, 31, 32 | Infinite (generated) | 80% |
+
+**Shared infrastructure:**
+- `src/lib/moduleProgress.js` — `saveModuleProgress()` + `getModuleProgress()`
+- `src/lib/runLimits.js` — `getRemainingRuns()` + `recordRun()` + `FREE_RUN_LIMIT=3`
+- `src/components/PlayingCard.jsx` — rank, suit, size (sm/md/lg), faceDown props
+- `src/components/PokerTable.jsx` — interactive table, playerCount/dealerIndex/bigBlindIndex props
+- `src/components/RunLimitModal.jsx` — daily limit paywall modal
+
+**Module 1 — Positions** (`src/screens/PositionsModule.jsx`)
+- One dashboard card, three sections (Early/Middle/Late) via tabs
+- Mode A: tap the correct seat | Mode B: name the highlighted seat
+- Player count varies (6/7/9) — positions relative to dealer button
+- 📊 reference: illustrated table diagram, position key, colour-coded by group
+- Confidence check on first visit (localStorage)
+
+**Module 2 — Hand Rankings** (`src/hand-rankings-trainer.jsx`)
+- Phase 1: identify the hand type (4 options, confusion-map wrong answers)
+- 3 tiers: obvious → subtle → trap (Straight Flush vs Straight, Full House vs Trips)
+- Phase 2: which hand wins? Two 5-card hands, tap the winner
+- 📊 reference: 1–10 ranked chart with PlayingCard examples per hand
+
+**Module 3 — Game Flow** (`src/screens/GameFlowModule.jsx`)
+- 10 shuffled hands × 4 streets = 40 questions per session
+- PlayingCard with face-down backs, 300ms flip on street advance
+- 5-slot community card board always visible
+- Question types: street recognition, card counts, hand identification
+- 📊 reference: 4-street explainer table
+
+**Module 4 — Ranges** (`src/screens/RangesModule.jsx`)
+- Three sections (Early/Middle/Late), one dashboard card
+- Ranges: Early (9 hands, very tight) | Middle (adds KQo, suited connectors) | Late (adds A2s-A9s, connectors)
+- Drill: two PlayingCards (hole cards) + position → Fold | Playable
+- 📊 reference: full-screen 13×13 poker matrix, 100vw, no scroll
+  - Colour: 🟢 Early > 🟡 Middle > 🔵 Late > 🔴 Fold
+  - Bold pairs, monospace, suited/offsuit opacity split, sticky headers
+
+**Hidden (preserved, reintroduce with Module 5):**
+- Starting Hands Basics, Position Basics, Facing a Raise, Beginner Traps
+- src/data/moduleScenarios.js — 60 Fold/Call/Raise scenarios
 
 ### 7.4 Home Dashboard ✅ BUILT
-- 🔥 Streak card (current day streak)
-- XP progress bar (Bronze 0–500, Silver 501–1500, Gold 1501+)
-- "Start today's drills" CTA button
-- Top leaks card (top 2 recurring mistakes)
-- 4 module cards with real completion %
-- Upgrade banner (free users only)
+Module card order: 🪑 Positions | 🃏 Hand Rankings | 🎮 Game Flow | 🎯 Ranges
+- Streak card, XP bar, upgrade banner (free users)
+- Leaks card: HIDDEN until Module 5
+- Old decision modules: HIDDEN until Module 5
 
-### 7.5 Leak Tracker ✅ BUILT
-Tags each wrong answer with a leak type:
+### 7.5 Stripe Paywall ✅ BUILT
+- Triggers: run limit hit, upgrade banner tap
+- Gating: `subscriptions.status IN ('active', 'trialing')`
+- Webhook: all 5 events handled, auto-writes subscription row on checkout
 
-| Leak Type      | Meaning                               |
-|----------------|---------------------------------------|
-| loose_preflop  | Played too many weak hands            |
-| position_error | Ignored position in decision          |
-| overcalling    | Called when should have folded        |
-| overplaying    | Raised aggressively with weak hand    |
+### 7.6 Supabase Edge Functions ✅ DEPLOYED
 
-Shows top 3 leaks in plain English on dashboard and leaks screen.
+| Function | Notes |
+|----------|-------|
+| create-checkout | --no-verify-jwt, calls setAuth() before invoke |
+| stripe-webhook | --no-verify-jwt, uses SUPABASE_SERVICE_ROLE_KEY for DB writes |
+| skill-check-feedback | default JWT verification |
+| claude-feedback | default JWT verification, replaced VITE_ANTHROPIC_API_KEY |
 
-### 7.6 Streak + XP System ✅ BUILT
-- Complete a session: +50 XP
-- All correct in session: +25 bonus XP
-- 7-day streak milestone: +100 XP
-- Streak increments if last_active = yesterday
-- Streak resets to 1 if gap > 1 day
-- No double-count if last_active = today
-
-### 7.7 Stripe Paywall ✅ BUILT
-Triggers:
-- Session 4+ in a day (free users)
-- Accessing Module 2, 3, or 4 (free users)
-- Upgrade banner tap on home dashboard
-
-Paywall screen:
-- Headline: "Unlock your full training path"
-- 3 green-check benefit bullets
-- Price: "£8.99 / month — cancel anytime"
-- CTA: "Start 7-day free trial"
-- Footer: "No charge for 7 days"
-
-Content gating: `subscriptions.status IN ('active', 'trialing')`
-
-### 7.8 Supabase Edge Functions ✅ DEPLOYED
-
-| Function             | URL                                                                          | Status                    |
-|----------------------|------------------------------------------------------------------------------|---------------------------|
-| create-checkout      | https://rcpclbtojfxvapuedwrz.supabase.co/functions/v1/create-checkout       | ✅ Live                   |
-| stripe-webhook       | https://rcpclbtojfxvapuedwrz.supabase.co/functions/v1/stripe-webhook        | ✅ Live (verify_jwt=false) |
-| skill-check-feedback | https://rcpclbtojfxvapuedwrz.supabase.co/functions/v1/skill-check-feedback  | ✅ Live                   |
-
-Webhook events handled:
-- checkout.session.completed
-- customer.subscription.created
-- customer.subscription.updated
-- customer.subscription.deleted
-- invoice.payment_failed
+### 7.7 Auth ✅ BUILT
+- persistSession, autoRefreshToken, detectSessionInUrl
+- Email confirmation: ON
+- SMTP: Resend (smtp.resend.com, port 465, user: resend, sender: onboarding@resend.dev)
 
 ---
 
-## 8. Success Metrics
+## 8. Launch Checklist
 
-| Metric                     | Target | Priority    |
-|----------------------------|--------|-------------|
-| Day 7 retention            | 25%+   | 🔴 Critical |
-| Onboarding completion      | 60%+   | 🔴 Critical |
-| First session completion   | 50%+   | 🔴 Critical |
-| Paywall → trial conversion | 8%+    | 🟠 High     |
-| Monthly churn              | <15%   | 🟠 High     |
-| Sessions per user per week | 3+     | 🟡 Medium   |
-| Scenarios per session      | 10+    | 🟡 Medium   |
-| Free → paid conversion     | 5%+    | 🟡 Medium   |
+### ✅ Done
+- [x] Stripe webhook registered + STRIPE_WEBHOOK_SECRET set
+- [x] STRIPE_SECRET_KEY (test), STRIPE_PRICE_ID corrected
+- [x] Subscriptions RLS + missing columns + unique constraint
+- [x] VITE_SUPABASE_ANON_KEY corrected
+- [x] Webhook auto-write confirmed working end-to-end
+- [x] Anthropic API key server-side (no src/ references)
+- [x] VITE_ANTHROPIC_API_KEY removed from Vercel
+- [x] Email confirmation enabled
+- [x] Resend SMTP configured
+- [x] Vercel env vars set (Supabase, Stripe public key)
 
----
-
-## 9. MoSCoW Feature List
-
-### ✅ Must Have (MVP — Built)
-- Onboarding + auth
-- Skill check with AI feedback
-- 4 training modules (60 scenarios)
-- Streak + XP system
-- Leak tracker
-- Home dashboard
-- Stripe paywall + subscription gating
-- Supabase Edge Functions
-
-### 🔵 Should Have (v2)
-- Daily challenge hand
-- Push notifications / streak reminders
-- Postflop basics module
-- Leak trend over time
-- Friend streaks / leaderboard
-- Custom SMTP (SendGrid/Resend)
-
-### 🟡 Could Have (v3)
-- Native iOS/Android app
-- AI coach chat
-- Personalised study plans
-- Hand history upload
-- Session replay
-- Social sharing (streak screenshots)
-
-### 🚫 Won't Have
-- GTO solver
-- Video course library
-- Coaching marketplace
-- Omaha / tournament formats
-- Real money integration
-
----
-
-## 10. Roadmap
-
-### v1 — MVP (Current) 🧪 Testing
-- Preflop drills, skill check, streaks, paywall
-- Goal: prove the habit loop + willingness to pay
-
-### v2 — Retention
-- Daily challenge, notifications, postflop module
-- Goal: improve Day 7 retention to 35%+
-
-### v3 — Growth
-- Native mobile app, AI coach, social features
-- Goal: viral growth + App Store presence
-
----
-
-## 11. Launch Checklist
-
-### ⚠️ Required Before Going Live
-- [ ] Register Stripe webhook in Stripe Dashboard → Developers → Webhooks
-- [ ] Set STRIPE_WEBHOOK_SECRET in Supabase secrets
-- [ ] Move Anthropic API key server-side (remove VITE_ANTHROPIC_API_KEY from frontend)
-- [ ] Re-enable Supabase email confirmation
-- [ ] Set up custom SMTP (SendGrid or Resend)
-- [ ] Switch Stripe from sandbox to live mode
-- [ ] Assign domain and deploy to Vercel
-- [ ] Test full flow with Stripe test card: 4242 4242 4242 4242
-- [ ] Verify module_completions RLS policies
-- [ ] Test subscription gating end-to-end
+### ⏳ Remaining
+- [ ] Update Supabase Auth redirect URLs → https://fold-faster.vercel.app
+- [ ] `supabase secrets set SITE_URL=https://fold-faster.vercel.app`
+- [ ] Trigger Vercel redeploy
+- [ ] Flip Stripe to live mode + new webhook + live secrets
+- [ ] Full end-to-end test on live URL
+- [ ] Custom domain (post-launch)
+- [ ] Resend domain verification when domain acquired (post-launch)
 
 ### 🚀 Launch Activities
-- [ ] Post in r/learnpoker and r/poker (beta testers)
-- [ ] Create TikTok/Reels "Would you fold this?" content
+- [ ] Post in r/learnpoker and r/poker
+- [ ] TikTok/Reels: "Would you fold this?" content
 - [ ] Launch post on X (Twitter)
-- [ ] Set up analytics (Vercel Analytics or PostHog)
-- [ ] Set up error monitoring (Sentry)
+- [ ] Vercel Analytics or PostHog
+- [ ] Sentry error monitoring
 
 ---
 
-## 12. Known Issues & Risks
+## 9. Roadmap
 
-| Issue                                      | Risk     | Status                    |
-|--------------------------------------------|----------|---------------------------|
-| Anthropic API key exposed in frontend      | 🔴 High  | ⚠️ Fix before launch      |
-| Supabase email confirmation disabled       | 🟠 Medium| ⚠️ Re-enable before launch|
-| No custom SMTP — Supabase rate limits      | 🟠 Medium| ⚠️ Set up SendGrid/Resend |
-| Stripe webhook not yet registered          | 🔴 High  | ⏳ Pending                |
-| No error monitoring                        | 🟡 Low   | 🔜 Add Sentry post-launch |
-| No analytics tracking                      | 🟡 Low   | 🔜 Add PostHog post-launch|
-| Retention risk — study feels like homework | 🔴 High  | Mitigated by streak/XP    |
+### v1 — Foundational Curriculum 🚀 Pre-launch
+- 4 foundational modules, reference charts, Stripe, full auth
 
----
+### v2 — Decisions + Retention
+- Module 5: Decision Training (Fold/Play by street)
+- Reintroduce 4 hidden decision modules as Advanced Pro
+- Reintroduce leak tracker
+- Daily challenge, push notifications, leak trends
 
-## 13. Competitor Analysis
-
-| Competitor        | Angle                         | Weakness                       | Our Edge                        |
-|-------------------|-------------------------------|--------------------------------|---------------------------------|
-| PokerCoaching.com | Pro coaches, video, quizzes   | Expensive, advanced, overwhelming | Simpler, cheaper, beginner-first |
-| GTO Wizard        | Solver-heavy serious study    | Too complex for beginners      | Plain English, no solver needed |
-| Poker Trainer     | Basic preflop charts          | Static, no feedback, outdated  | AI feedback, gamified           |
-| Upswing Poker     | Course library, pro content   | Passive, not interactive       | Interactive daily drills        |
+### v3 — Growth
+- Native iOS/Android, AI coach, social features
 
 ---
 
-## 14. Change Log
+## 10. Change Log
 
-| Date     | Version | Change                                              |
-|----------|---------|-----------------------------------------------------|
-| Mar 2026 | 0.1     | Project setup, Supabase, Stripe account             |
-| Mar 2026 | 0.2     | Onboarding flow + auth                              |
-| Mar 2026 | 0.3     | AI scenario engine + Claude feedback                |
-| Mar 2026 | 0.4     | Home dashboard + streak system                      |
-| Mar 2026 | 0.8     | 60 scenarios across 4 modules + completion tracking |
-| Mar 2026 | 0.9     | Stripe paywall + subscription gating + Edge Functions |
-| Mar 2026 | 0.9.1   | Claude model upgraded to claude-sonnet-4-20250514   |
-| Mar 2026 | 0.9.2   | stripe-webhook bug fixed (verify_jwt=false)         |
-| Mar 2026 | 1.0     | MVP complete — entering testing phase               |
+| Date | Version | Change |
+|------|---------|--------|
+| Mar 2026 | 0.1–1.0 | Initial build: onboarding, skill check, 4 decision modules, streak/XP, Stripe, Edge Functions |
+| 30 Mar 2026 | 1.0.1 | Stripe webhook + secrets fixed. create-checkout 401 fixed. Logout + login link added |
+| 30 Mar 2026 | 1.0.2 | Subscriptions RLS applied. useSubscription → getSession(). Auth config fixed |
+| 31 Mar 2026 | 1.0.3 | Full Stripe integration confirmed. Missing columns + unique constraint. Anon key fixed. Webhook auto-write confirmed |
+| 31 Mar 2026 | 1.1.0 | Content pivot: new foundational curriculum. Old 4 modules hidden as Pro content |
+| 31 Mar 2026 | 1.2.0 | Module 1 (Positions) + Module 2 (Hand Rankings) built and wired |
+| 31 Mar 2026 | 1.3.0 | Supabase persistence for all modules via moduleProgress.js |
+| 1 Apr 2026 | 1.4.0 | Module 3 (Game Flow) + Module 4 (Ranges) built. PlayingCard + PokerTable. 13×13 matrix. Reference charts in all modules |
+| 1 Apr 2026 | 1.5.0 | Module order confirmed: Positions → Hand Rankings → Game Flow → Ranges |
+| 1 Apr 2026 | 1.6.0 | Question pools expanded. Free tier 3 runs/day. Dashboard cleaned up |
+| 1 Apr 2026 | 1.7.0 | Pre-launch: Anthropic key server-side confirmed. Email + SMTP live. Vercel env vars set |
+
+### Stripe secrets (do not commit real values)
+
+Configure in **Supabase** (Dashboard → Edge Functions → Secrets) or via CLI on your machine only. Never paste live `sk_live_`, `whsec_`, or full keys into this repo.
+
+- `STRIPE_PRICE_ID` — Stripe Price ID for the Pro product  
+- `STRIPE_SECRET_KEY` — Stripe secret key (`sk_live_…` or `sk_test_…`)  
+- `STRIPE_WEBHOOK_SECRET` — Webhook signing secret (`whsec_…`)
+
+Example (placeholders):
+
+```bash
+supabase secrets set STRIPE_PRICE_ID=price_...
+supabase secrets set STRIPE_SECRET_KEY=sk_...
+supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+**Vercel:** `VITE_STRIPE_PUBLIC_KEY` only — use the **publishable** key (`pk_live_…` / `pk_test_…`), never the secret key.
+
+**If secrets were ever committed:** rotate them in Stripe (new secret key, new webhook secret, review price ID) and update Supabase/Vercel.

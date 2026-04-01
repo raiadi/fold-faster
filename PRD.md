@@ -308,3 +308,23 @@ Module card order: 🪑 Positions | 🃏 Hand Rankings | 🎮 Game Flow | 🎯 R
 | 1 Apr 2026 | 1.5.0 | Module order confirmed: Positions → Hand Rankings → Game Flow → Ranges |
 | 1 Apr 2026 | 1.6.0 | Question pools expanded. Free tier 3 runs/day. Dashboard cleaned up |
 | 1 Apr 2026 | 1.7.0 | Pre-launch: Anthropic key server-side confirmed. Email + SMTP live. Vercel env vars set |
+
+### Stripe secrets (do not commit real values)
+
+Configure in **Supabase** (Dashboard → Edge Functions → Secrets) or via CLI on your machine only. Never paste live `sk_live_`, `whsec_`, or full keys into this repo.
+
+- `STRIPE_PRICE_ID` — Stripe Price ID for the Pro product  
+- `STRIPE_SECRET_KEY` — Stripe secret key (`sk_live_…` or `sk_test_…`)  
+- `STRIPE_WEBHOOK_SECRET` — Webhook signing secret (`whsec_…`)
+
+Example (placeholders):
+
+```bash
+supabase secrets set STRIPE_PRICE_ID=price_...
+supabase secrets set STRIPE_SECRET_KEY=sk_...
+supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+**Vercel:** `VITE_STRIPE_PUBLIC_KEY` only — use the **publishable** key (`pk_live_…` / `pk_test_…`), never the secret key.
+
+**If secrets were ever committed:** rotate them in Stripe (new secret key, new webhook secret, review price ID) and update Supabase/Vercel.

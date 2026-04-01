@@ -10,6 +10,8 @@ import ModuleDrill from './pages/ModuleDrill';
 import ModuleDrillResults from './pages/ModuleDrillResults';
 import Paywall from './pages/Paywall';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Home from './pages/Home';
 import PokerTable from './components/PokerTable';
 import PlayingCard from './components/PlayingCard';
@@ -37,6 +39,8 @@ function App() {
           <Route path="/module/:moduleId/results" element={<ModuleDrillResults />} />
           <Route path="/paywall" element={<Paywall />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/home" element={<Home />} />
           <Route
             path="/dev/poker-table"
