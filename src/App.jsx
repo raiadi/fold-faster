@@ -15,6 +15,7 @@ import PokerTable from './components/PokerTable';
 import PlayingCard from './components/PlayingCard';
 import PositionsModule from './screens/PositionsModule';
 import RangesModule from './screens/RangesModule';
+import GameFlowModule from './screens/GameFlowModule';
 import HandRankingsTrainer from '../hand-rankings-trainer';
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
           <Route path="/skill-check/results" element={<SkillCheckResults />} />
           <Route path="/module/positions" element={<PositionsModule />} />
           <Route path="/module/ranges" element={<RangesModule />} />
+          <Route path="/module/game-flow" element={<GameFlowModule />} />
           <Route path="/module/hand-rankings" element={<HandRankingsTrainer />} />
           <Route path="/module/:moduleId" element={<ModuleDrill />} />
           <Route path="/module/:moduleId/results" element={<ModuleDrillResults />} />

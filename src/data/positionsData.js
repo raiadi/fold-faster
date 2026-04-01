@@ -45,54 +45,21 @@ const WRONG_OPTIONS = {
   'Big Blind': ['Small Blind', 'UTG', 'Button', 'Cutoff'],
 };
 
-const EARLY_POOL = [
-  { positionName: 'UTG', playerCount: 6, mode: 'A' },
-  { positionName: 'UTG', playerCount: 7, mode: 'B' },
-  { positionName: 'UTG', playerCount: 9, mode: 'A' },
-  { positionName: 'UTG+1', playerCount: 7, mode: 'A' },
-  { positionName: 'UTG+1', playerCount: 9, mode: 'B' },
-  { positionName: 'UTG+2', playerCount: 9, mode: 'A' },
-  { positionName: 'UTG', playerCount: 9, mode: 'B' },
-  { positionName: 'UTG+1', playerCount: 9, mode: 'A' },
-  { positionName: 'UTG', playerCount: 6, mode: 'B' },
-  { positionName: 'UTG+2', playerCount: 9, mode: 'B' },
-];
-
-const MIDDLE_POOL = [
-  { positionName: 'MP', playerCount: 6, mode: 'A' },
-  { positionName: 'MP', playerCount: 7, mode: 'B' },
-  { positionName: 'MP', playerCount: 9, mode: 'A' },
-  { positionName: 'MP+1', playerCount: 9, mode: 'B' },
-  { positionName: 'Hijack', playerCount: 6, mode: 'A' },
-  { positionName: 'Hijack', playerCount: 7, mode: 'B' },
-  { positionName: 'Hijack', playerCount: 9, mode: 'A' },
-  { positionName: 'MP', playerCount: 9, mode: 'B' },
-  { positionName: 'MP+1', playerCount: 9, mode: 'A' },
-  { positionName: 'Hijack', playerCount: 9, mode: 'B' },
-];
-
-const LATE_POOL = [
-  { positionName: 'Cutoff', playerCount: 6, mode: 'A' },
-  { positionName: 'Cutoff', playerCount: 7, mode: 'B' },
-  { positionName: 'Cutoff', playerCount: 9, mode: 'A' },
-  { positionName: 'Button', playerCount: 6, mode: 'B' },
-  { positionName: 'Button', playerCount: 9, mode: 'A' },
-  { positionName: 'Small Blind', playerCount: 7, mode: 'A' },
-  { positionName: 'Small Blind', playerCount: 9, mode: 'B' },
-  { positionName: 'Big Blind', playerCount: 6, mode: 'A' },
-  { positionName: 'Big Blind', playerCount: 9, mode: 'B' },
-  { positionName: 'Button', playerCount: 7, mode: 'A' },
-];
-
 function rotateWrongOptions(positionName, shift) {
   const base = WRONG_OPTIONS[positionName] || ['UTG', 'MP', 'Hijack', 'Cutoff'];
   const start = shift % base.length;
   return [...base.slice(start), ...base.slice(0, start)].slice(0, 3);
 }
 
+/** Spread dealerIndex across 0..playerCount-1 as i runs 0..49 */
+function dealerIndexForQuestion(i, playerCount) {
+  const step = playerCount % 2 === 0 ? 3 : 2;
+  return (i * step + Math.floor(i / 7) + (i % 3)) % playerCount;
+}
+
 function createQuestion(template, sequenceIndex) {
   const { positionName, playerCount, mode } = template;
-  const dealerIndex = (sequenceIndex * 2 + playerCount - 1) % playerCount;
+  const dealerIndex = dealerIndexForQuestion(sequenceIndex, playerCount);
   const targetOffset = POSITION_OFFSETS[playerCount][positionName];
   const targetSeat = (dealerIndex + targetOffset) % playerCount;
   const bigBlindIndex = (dealerIndex + 2) % playerCount;
@@ -108,18 +75,66 @@ function createQuestion(template, sequenceIndex) {
   };
 }
 
-function buildSection(pool) {
+/** Early: UTG, UTG+1, UTG+2 only — valid (position, playerCount) pairs */
+const EARLY_TEMPLATES = [
+  { positionName: 'UTG', playerCount: 6 },
+  { positionName: 'UTG', playerCount: 7 },
+  { positionName: 'UTG', playerCount: 9 },
+  { positionName: 'UTG+1', playerCount: 7 },
+  { positionName: 'UTG+1', playerCount: 9 },
+  { positionName: 'UTG+2', playerCount: 9 },
+  { positionName: 'UTG', playerCount: 9 },
+  { positionName: 'UTG+1', playerCount: 9 },
+  { positionName: 'UTG+2', playerCount: 9 },
+  { positionName: 'UTG', playerCount: 7 },
+];
+
+/** Middle: MP, MP+1, Hijack */
+const MIDDLE_TEMPLATES = [
+  { positionName: 'MP', playerCount: 6 },
+  { positionName: 'MP', playerCount: 7 },
+  { positionName: 'MP', playerCount: 9 },
+  { positionName: 'MP+1', playerCount: 9 },
+  { positionName: 'Hijack', playerCount: 6 },
+  { positionName: 'Hijack', playerCount: 7 },
+  { positionName: 'Hijack', playerCount: 9 },
+  { positionName: 'MP', playerCount: 9 },
+  { positionName: 'MP+1', playerCount: 9 },
+  { positionName: 'Hijack', playerCount: 9 },
+  { positionName: 'MP', playerCount: 7 },
+  { positionName: 'Hijack', playerCount: 7 },
+];
+
+/** Late: Cutoff, Button, SB, BB */
+const LATE_TEMPLATES = [
+  { positionName: 'Cutoff', playerCount: 6 },
+  { positionName: 'Cutoff', playerCount: 7 },
+  { positionName: 'Cutoff', playerCount: 9 },
+  { positionName: 'Button', playerCount: 6 },
+  { positionName: 'Button', playerCount: 7 },
+  { positionName: 'Button', playerCount: 9 },
+  { positionName: 'Small Blind', playerCount: 6 },
+  { positionName: 'Small Blind', playerCount: 7 },
+  { positionName: 'Small Blind', playerCount: 9 },
+  { positionName: 'Big Blind', playerCount: 6 },
+  { positionName: 'Big Blind', playerCount: 7 },
+  { positionName: 'Big Blind', playerCount: 9 },
+  { positionName: 'Cutoff', playerCount: 9 },
+  { positionName: 'Button', playerCount: 6 },
+];
+
+function buildSection(templates) {
   const questions = [];
-  for (let i = 0; i < 20; i += 1) {
-    const template = pool[i % pool.length];
-    questions.push(createQuestion(template, i));
+  for (let i = 0; i < 50; i += 1) {
+    const base = templates[i % templates.length];
+    const mode = i % 2 === 0 ? 'A' : 'B';
+    questions.push(createQuestion({ ...base, mode }, i));
   }
   return questions;
 }
 
 export const POSITIONS_DATA = {
-  early: buildSection(EARLY_POOL),
-  middle: buildSection(MIDDLE_POOL),
-  late: buildSection(LATE_POOL),
+  early: buildSection(EARLY_TEMPLATES),
+  middle: buildSection(MIDDLE_TEMPLATES),
+  late: buildSection(LATE_TEMPLATES),
 };
-

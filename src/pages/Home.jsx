@@ -63,7 +63,7 @@ export default function Home() {
         (completions || []).forEach((c) => { compMap[c.module_id] = c; });
         setModuleCompletions(compMap);
 
-        const extras = await getModuleProgress(supabase, [10, 11, 12, 20, 30, 31, 32]);
+        const extras = await getModuleProgress(supabase, [10, 11, 12, 20, 30, 31, 32, 40]);
         if (!cancelled) setExtraModuleProgress(extras);
 
         const count = await getTodaySessionCount(user.id);
@@ -98,6 +98,7 @@ export default function Home() {
     Boolean(extraModuleProgress[30]?.completed)
     && Boolean(extraModuleProgress[31]?.completed)
     && Boolean(extraModuleProgress[32]?.completed);
+  const gameFlowComplete = Boolean(extraModuleProgress[40]?.completed);
   return (
     <div className="min-h-screen bg-brand-dark text-white flex flex-col pb-8">
       {/* Top bar */}
@@ -171,7 +172,9 @@ export default function Home() {
           )}
         </section>
 
-        {/* Top leaks */}
+        {/* HIDDEN: reintroduce with Module 5 (Decision Training)
+            when leak tracking becomes meaningful again */}
+        {/*
         {topLeaks.length > 0 && (
           <section className="rounded-xl bg-white/5 border border-white/10 p-4">
             <h2 className="font-semibold text-white mb-3">Your top leaks</h2>
@@ -184,8 +187,9 @@ export default function Home() {
             </ul>
           </section>
         )}
+        */}
 
-        {/* Module cards */}
+        {/* Module cards — Positions, Hand Rankings, Game Flow, Ranges */}
         <section>
           <h2 className="font-semibold text-white mb-3">Training modules</h2>
           <div className="space-y-3">
@@ -226,6 +230,24 @@ export default function Home() {
             </Link>
 
             <Link
+              to="/module/game-flow"
+              className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-4 hover:bg-white/10 transition"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-medium text-white/50">🎮 Game Flow</span>
+                  {gameFlowComplete && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-brand-green/20 text-brand-green font-medium">
+                      ✅
+                    </span>
+                  )}
+                </div>
+                <p className="text-white font-medium text-sm truncate">See how a hand unfolds street by street</p>
+              </div>
+              <span className="text-white/30 ml-3">›</span>
+            </Link>
+
+            <Link
               to="/module/ranges"
               className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-4 hover:bg-white/10 transition"
             >
@@ -243,6 +265,8 @@ export default function Home() {
               <span className="text-white/30 ml-3">›</span>
             </Link>
 
+            {/* HIDDEN: reintroduce as Advanced Pro content with Module 5 */}
+            {/*
             {[1, 2, 3, 4].map((mid) => {
               const comp = moduleCompletions[mid];
               const bestCorrect = comp?.best_correct ?? 0;
@@ -307,6 +331,7 @@ export default function Home() {
                 </Link>
               );
             })}
+            */}
           </div>
         </section>
 
