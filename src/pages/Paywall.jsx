@@ -59,7 +59,7 @@ export default function Paywall() {
 
       {/* Pricing */}
       <div className="text-center mb-8">
-        <p className="text-white font-semibold text-lg">£8.99 / month — cancel anytime</p>
+        <p className="text-white font-semibold text-lg">£2.99 / month — cancel anytime</p>
       </div>
 
       {/* CTA */}

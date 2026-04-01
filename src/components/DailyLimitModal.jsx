@@ -23,7 +23,7 @@ export default function DailyLimitModal({ onClose }) {
             to="/paywall"
             className="block w-full py-3 rounded-xl bg-green-600 text-white font-semibold text-center hover:opacity-90"
           >
-            Upgrade to Pro — £8.99/month
+            Upgrade to Pro — £2.99/month
           </Link>
           <button
             type="button"
