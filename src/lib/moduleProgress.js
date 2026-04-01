@@ -4,12 +4,14 @@ function getCompletionThreshold(totalQuestions) {
   return Math.ceil(totalQuestions * 0.9);
 }
 
-export async function saveModuleProgress(supabase, moduleId, score, totalQuestions) {
+export async function saveModuleProgress(supabase, moduleId, score, totalQuestions, options = {}) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return;
 
   const userId = session.user.id;
-  const threshold = getCompletionThreshold(totalQuestions);
+  const threshold = options.minCorrect != null
+    ? options.minCorrect
+    : getCompletionThreshold(totalQuestions);
   const completedByScore = score >= threshold;
 
   const { data: existing } = await supabase

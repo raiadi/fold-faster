@@ -63,7 +63,7 @@ export default function Home() {
         (completions || []).forEach((c) => { compMap[c.module_id] = c; });
         setModuleCompletions(compMap);
 
-        const extras = await getModuleProgress(supabase, [10, 11, 12, 20]);
+        const extras = await getModuleProgress(supabase, [10, 11, 12, 20, 30, 31, 32]);
         if (!cancelled) setExtraModuleProgress(extras);
 
         const count = await getTodaySessionCount(user.id);
@@ -94,6 +94,10 @@ export default function Home() {
     && Boolean(extraModuleProgress[11]?.completed)
     && Boolean(extraModuleProgress[12]?.completed);
   const handRankingsComplete = Boolean(extraModuleProgress[20]?.completed);
+  const rangesComplete =
+    Boolean(extraModuleProgress[30]?.completed)
+    && Boolean(extraModuleProgress[31]?.completed)
+    && Boolean(extraModuleProgress[32]?.completed);
   return (
     <div className="min-h-screen bg-brand-dark text-white flex flex-col pb-8">
       {/* Top bar */}
@@ -217,6 +221,24 @@ export default function Home() {
                   )}
                 </div>
                 <p className="text-white font-medium text-sm truncate">Learn which hands beat which</p>
+              </div>
+              <span className="text-white/30 ml-3">›</span>
+            </Link>
+
+            <Link
+              to="/module/ranges"
+              className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 p-4 hover:bg-white/10 transition"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-medium text-white/50">🎯 Ranges</span>
+                  {rangesComplete && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-brand-green/20 text-brand-green font-medium">
+                      ✅
+                    </span>
+                  )}
+                </div>
+                <p className="text-white font-medium text-sm truncate">Know which hands to play from every position</p>
               </div>
               <span className="text-white/30 ml-3">›</span>
             </Link>
