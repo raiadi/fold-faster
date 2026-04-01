@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import DailyLimitModal from '../components/DailyLimitModal';
 import PlayingCard from '../components/PlayingCard';
 import RangeChartOverlay from '../components/RangeChartOverlay';
 import { generateRangesQuestions } from '../data/rangesData';
 import { supabase } from '../lib/supabase';
 import { getModuleProgress, saveModuleProgress } from '../lib/moduleProgress';
+import { getRemainingRuns, recordRun } from '../lib/runLimits';
+import { useSubscription } from '../lib/subscription';
 
 const SUIT_SYMBOL = { h: '♥', d: '♦', c: '♣', s: '♠' };
 
@@ -37,8 +40,15 @@ function formatHandLine(card1, card2) {
   return `${card1.rank}${s1} ${card2.rank}${s2}`;
 }
 
+function rangesRunKey(sectionKey) {
+  return `ranges_${sectionKey}`;
+}
+
 export default function RangesModule() {
   const navigate = useNavigate();
+  const { isPro, loading: subLoading } = useSubscription();
+  const [limitModalOpen, setLimitModalOpen] = useState(false);
+  const runRecordedRef = useRef(false);
   const [view, setView] = useState('sections');
   const [section, setSection] = useState('early');
   const [moduleProgress, setModuleProgress] = useState({});
@@ -60,6 +70,7 @@ export default function RangesModule() {
   }, [refreshProgress]);
 
   const startQuiz = (key) => {
+    runRecordedRef.current = false;
     setSection(key);
     setQuestions(generateRangesQuestions(key, 15));
     setIndex(0);
@@ -68,6 +79,14 @@ export default function RangesModule() {
     setFeedback(null);
     completionSavedRef.current = false;
     setView('quiz');
+  };
+
+  const tryStartQuiz = (key) => {
+    if (!subLoading && !isPro && getRemainingRuns(rangesRunKey(key)) === 0) {
+      setLimitModalOpen(true);
+      return;
+    }
+    startQuiz(key);
   };
 
   const current = questions[index];
@@ -119,6 +138,15 @@ export default function RangesModule() {
   const sectionOrder = ['early', 'middle', 'late'];
   const nextKey = sectionOrder[sectionOrder.indexOf(section) + 1] || null;
 
+  useEffect(() => {
+    if (view !== 'results') return;
+    if (runRecordedRef.current) return;
+    runRecordedRef.current = true;
+    if (!subLoading && !isPro) {
+      recordRun(rangesRunKey(section));
+    }
+  }, [view, section, isPro, subLoading]);
+
   return (
     <div className="min-h-screen bg-[#0f1923] text-white px-4 pt-6 pb-28 max-w-[390px] mx-auto">
       <button
@@ -137,18 +165,26 @@ export default function RangesModule() {
             {SECTION_CARDS.map((card) => {
               const modId = SECTION_MODULE_IDS[card.key];
               const done = Boolean(moduleProgress[modId]?.completed);
+              const rem =
+                subLoading || isPro ? null : getRemainingRuns(rangesRunKey(card.key));
               return (
                 <button
                   key={card.key}
                   type="button"
-                  onClick={() => startQuiz(card.key)}
+                  onClick={() => tryStartQuiz(card.key)}
                   className="w-full text-left rounded-xl border border-white/15 bg-white/5 p-4 hover:bg-white/10 transition"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <p className="font-semibold">
+                    <p className="font-semibold flex items-center gap-2">
                       {card.emoji} {card.title}
+                      {rem === 0 && !isPro && !subLoading && (
+                        <span className="text-lg" aria-hidden>🔒</span>
+                      )}
                     </p>
-                    <span className="text-xs text-white/80">
+                    <span className="text-xs text-white/80 flex flex-col items-end gap-0.5">
+                      {rem != null && rem > 0 && rem < 3 && (
+                        <span className="text-amber-400">{rem} runs left today</span>
+                      )}
                       {done ? '✅ Complete' : '—'}
                     </span>
                   </div>
@@ -237,7 +273,7 @@ export default function RangesModule() {
           {score >= 12 && nextKey && (
             <button
               type="button"
-              onClick={() => startQuiz(nextKey)}
+              onClick={() => tryStartQuiz(nextKey)}
               className="w-full py-4 rounded-xl bg-[#22c55e] text-[#0f1923] font-semibold"
             >
               Next section
@@ -246,7 +282,7 @@ export default function RangesModule() {
           {score < 12 && (
             <button
               type="button"
-              onClick={() => startQuiz(section)}
+              onClick={() => tryStartQuiz(section)}
               className="w-full py-4 rounded-xl bg-[#22c55e] text-[#0f1923] font-semibold"
             >
               Try again
@@ -276,6 +312,9 @@ export default function RangesModule() {
       </button>
 
       <RangeChartOverlay open={chartOpen} onClose={() => setChartOpen(false)} />
+      {limitModalOpen && (
+        <DailyLimitModal onClose={() => setLimitModalOpen(false)} />
+      )}
     </div>
   );
 }

@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import DailyLimitModal from '../components/DailyLimitModal';
 import PokerTable from '../components/PokerTable';
 import PositionChartOverlay from '../components/PositionChartOverlay';
 import { POSITIONS_DATA } from '../data/positionsData';
 import { supabase } from '../lib/supabase';
 import { getModuleProgress, saveModuleProgress } from '../lib/moduleProgress';
+import { getRemainingRuns, recordRun } from '../lib/runLimits';
+import { useSubscription } from '../lib/subscription';
 
 const CONFIDENCE_KEY = 'positions_confidence_done';
 const SECTION_MODULE_IDS = {
@@ -44,8 +47,15 @@ function buildQuiz(section) {
   return shuffle(POSITIONS_DATA[section] || []).slice(0, 10);
 }
 
+function positionsRunKey(section) {
+  return `positions_${section}`;
+}
+
 export default function PositionsModule() {
   const navigate = useNavigate();
+  const { isPro, loading: subLoading } = useSubscription();
+  const runRecordedRef = useRef(false);
+  const [limitModalOpen, setLimitModalOpen] = useState(false);
   const [view, setView] = useState('confidence');
   const [activeSection, setActiveSection] = useState('early');
   const [sectionCompletion, setSectionCompletion] = useState({
@@ -92,6 +102,7 @@ export default function PositionsModule() {
   }, [currentQuestion]);
 
   const startSectionQuiz = (section) => {
+    runRecordedRef.current = false;
     setActiveSection(section);
     setQuestions(buildQuiz(section));
     setIndex(0);
@@ -103,6 +114,14 @@ export default function PositionsModule() {
     setLastScore(null);
     setResultSaved(false);
     setView('quiz');
+  };
+
+  const tryStartSection = (section) => {
+    if (!subLoading && !isPro && getRemainingRuns(positionsRunKey(section)) === 0) {
+      setLimitModalOpen(true);
+      return;
+    }
+    startSectionQuiz(section);
   };
 
   const goNextQuestionOrResults = (nextScore) => {
@@ -162,6 +181,15 @@ export default function PositionsModule() {
       setResultSaved(true);
     })();
   }, [activeSection, lastScore, resultSaved, view]);
+
+  useEffect(() => {
+    if (view !== 'results' || lastScore === null) return;
+    if (runRecordedRef.current) return;
+    runRecordedRef.current = true;
+    if (!subLoading && !isPro) {
+      recordRun(positionsRunKey(activeSection));
+    }
+  }, [view, lastScore, activeSection, isPro, subLoading]);
 
   const sectionOrder = ['early', 'middle', 'late'];
   const nextSection = sectionOrder[sectionOrder.indexOf(activeSection) + 1] || null;
@@ -259,16 +287,26 @@ export default function PositionsModule() {
             {sectionOrder.map((section) => {
               const meta = SECTION_META[section];
               const done = sectionCompletion[section];
+              const rem =
+                subLoading || isPro ? null : getRemainingRuns(positionsRunKey(section));
               return (
                 <button
                   key={section}
                   type="button"
-                  onClick={() => startSectionQuiz(section)}
+                  onClick={() => tryStartSection(section)}
                   className="w-full text-left rounded-xl border border-white/15 bg-white/5 p-4 hover:bg-white/10 transition"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <p className="font-semibold">{meta.emoji} {meta.title}</p>
-                    <span className="text-xs font-medium text-white/80">
+                    <p className="font-semibold flex items-center gap-2">
+                      {meta.emoji} {meta.title}
+                      {rem === 0 && !isPro && !subLoading && (
+                        <span className="text-lg" aria-hidden>🔒</span>
+                      )}
+                    </p>
+                    <span className="text-xs font-medium text-white/80 flex flex-col items-end gap-0.5">
+                      {rem != null && rem > 0 && rem < 3 && (
+                        <span className="text-amber-400">{rem} runs left today</span>
+                      )}
                       {done ? '✅ Complete' : '0/10'}
                     </span>
                   </div>
@@ -356,7 +394,7 @@ export default function PositionsModule() {
           {lastScore >= 9 && nextSection && (
             <button
               type="button"
-              onClick={() => startSectionQuiz(nextSection)}
+              onClick={() => tryStartSection(nextSection)}
               className="w-full py-4 rounded-xl bg-[#22c55e] text-[#0f1923] font-semibold"
             >
               Next section
@@ -366,7 +404,7 @@ export default function PositionsModule() {
           {lastScore < 9 && (
             <button
               type="button"
-              onClick={() => startSectionQuiz(activeSection)}
+              onClick={() => tryStartSection(activeSection)}
               className="w-full py-4 rounded-xl bg-[#22c55e] text-[#0f1923] font-semibold"
             >
               Retry
@@ -394,6 +432,9 @@ export default function PositionsModule() {
     </button>
     {showPosChart && (
       <PositionChartOverlay onClose={() => setShowPosChart(false)} />
+    )}
+    {limitModalOpen && (
+      <DailyLimitModal onClose={() => setLimitModalOpen(false)} />
     )}
     </>
   );

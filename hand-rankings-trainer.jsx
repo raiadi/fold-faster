@@ -1,8 +1,11 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import DailyLimitModal from "./src/components/DailyLimitModal.jsx";
 import PlayingCard from "./src/components/PlayingCard.jsx";
 import { supabase } from "./src/lib/supabase";
 import { getModuleProgress, saveModuleProgress } from "./src/lib/moduleProgress";
+import { getRemainingRuns, recordRun } from "./src/lib/runLimits.js";
+import { useSubscription } from "./src/lib/subscription.js";
 
 /** Representative example hands for the reference chart (PlayingCard rank + suit keys). */
 const HAND_RANKINGS_CHART_ROWS = [
@@ -325,6 +328,47 @@ function generateHand(type) {
   }
 }
 
+/** Flush with ranks that almost look sequential but are not a straight (same suit). */
+function generateFlushAlmostStraightTrap() {
+  const s = pickRandom(SUITS);
+  const vals = shuffle(["2", "5", "6", "7", "9"]).sort((a, b) => VALUE_RANK[a] - VALUE_RANK[b]);
+  return vals.map((v) => ({ value: v, suit: s }));
+}
+
+/** Full house where trips and pair are close in rank (common misread as trips). */
+function generateFullHouseTrapVariant() {
+  const trips = pickRandom(VALUES);
+  const pair = pickRandom(VALUES.filter((x) => x !== trips));
+  const s3 = shuffle(SUITS).slice(0, 3);
+  const s2 = shuffle(SUITS).slice(0, 2);
+  return shuffle([
+    ...s3.map((su) => ({ value: trips, suit: su })),
+    ...s2.map((su) => ({ value: pair, suit: su })),
+  ]);
+}
+
+/** Two pair including a paired “board” feel — high pair shared. */
+function generateTwoPairTrapVariant() {
+  const p1 = pickRandom(["J", "Q", "K", "A"]);
+  const p2 = pickRandom(VALUES.filter((x) => x !== p1));
+  const kicker = pickRandom(VALUES.filter((x) => x !== p1 && x !== p2));
+  const s1 = shuffle(SUITS).slice(0, 2);
+  const s2 = shuffle(SUITS).slice(0, 2);
+  return shuffle([
+    ...s1.map((s) => ({ value: p1, suit: s })),
+    ...s2.map((s) => ({ value: p2, suit: s })),
+    { value: kicker, suit: pickRandom(SUITS) },
+  ]);
+}
+
+/** Tier 3: same hand type as `type`, but trap-heavy layouts where beginners slip. */
+function generateTier3Hand(type) {
+  if (type === "Flush" && Math.random() < 0.5) return generateFlushAlmostStraightTrap();
+  if (type === "Full House" && Math.random() < 0.45) return generateFullHouseTrapVariant();
+  if (type === "Two Pair" && Math.random() < 0.45) return generateTwoPairTrapVariant();
+  return generateHand(type);
+}
+
 function isSequential(sortedVals) {
   const ranks = sortedVals.map(v => VALUE_RANK[v]);
   for (let i = 1; i < ranks.length; i++) {
@@ -348,17 +392,51 @@ function getWrongOptions(correct, count = 3, tier = 1) {
   return shuffle(pool).slice(0, count);
 }
 
-// Tier configs
+// Tier configs — 15 question types per tier (random pick each question)
 const TIER_CONFIG = {
-  1: { label: "Tier 1 — Basics", types: ["One Pair", "Two Pair", "Three of a Kind", "Four of a Kind", "Flush", "Full House"] },
-  2: { label: "Tier 2 — Subtle", types: ["Straight", "Flush", "Full House", "Two Pair", "Three of a Kind", "High Card", "Straight Flush"] },
-  3: { label: "Tier 3 — Traps", types: ["Straight", "Flush", "Straight Flush", "Royal Flush", "High Card", "Full House", "Two Pair"] },
+  1: {
+    label: "Tier 1 — Basics",
+    types: [
+      "One Pair", "Two Pair", "Three of a Kind", "Four of a Kind", "Flush", "Full House",
+      "One Pair", "Two Pair", "Three of a Kind", "Flush", "Full House", "Four of a Kind",
+      "One Pair", "Two Pair", "Three of a Kind",
+    ],
+  },
+  2: {
+    label: "Tier 2 — Subtle",
+    types: [
+      "Straight", "Flush", "Full House", "Two Pair", "Three of a Kind", "High Card", "Straight Flush",
+      "Straight", "Flush", "Two Pair", "Three of a Kind", "High Card", "Straight", "Flush", "Full House",
+      "Straight Flush",
+    ],
+  },
+  3: {
+    label: "Tier 3 — Traps",
+    types: [
+      "Straight", "Flush", "Straight Flush", "Royal Flush", "High Card", "Full House", "Two Pair",
+      "Flush", "Straight", "Straight Flush", "Full House", "Three of a Kind", "Two Pair", "Flush", "Straight",
+    ],
+  },
 };
 
-const QUESTIONS_PER_TIER = 6;
+const QUESTIONS_PER_TIER = 15;
 const PASS_THRESHOLD = 0.9;
 const TOTAL_PHASE1_TIERS = 3;
-const PHASE2_QUESTIONS = 8;
+const PHASE2_QUESTIONS = 20;
+
+/** Head-to-head comparisons beginners often get wrong */
+const PHASE2_CONFUSION_PAIRS = [
+  ["Flush", "Straight"],
+  ["Straight", "Straight Flush"],
+  ["Straight Flush", "Flush"],
+  ["Two Pair", "Full House"],
+  ["Three of a Kind", "Full House"],
+  ["Full House", "Four of a Kind"],
+  ["One Pair", "Two Pair"],
+  ["High Card", "One Pair"],
+  ["Royal Flush", "Straight Flush"],
+  ["Two Pair", "Three of a Kind"],
+];
 
 // ─── Card Component ───
 function Card({ value, suit, small = false }) {
@@ -493,6 +571,9 @@ function ProgressBar({ current, total, label }) {
 // ─── Main App ───
 export default function HandRankingsTrainer() {
   const navigate = useNavigate();
+  const { isPro, loading: subLoading } = useSubscription();
+  const [limitModalOpen, setLimitModalOpen] = useState(false);
+  const runRecordedRef = useRef(false);
   const [screen, setScreen] = useState("menu"); // menu, phase1, phase1result, phase2, phase2result, complete
   const [tier, setTier] = useState(1);
   const [questionNum, setQuestionNum] = useState(0);
@@ -529,7 +610,7 @@ export default function HandRankingsTrainer() {
   const generatePhase1Question = useCallback((t) => {
     const tierTypes = TIER_CONFIG[t].types;
     const type = pickRandom(tierTypes);
-    const hand = generateHand(type);
+    const hand = t === 3 ? generateTier3Hand(type) : generateHand(type);
     const wrongs = getWrongOptions(type, 3, t);
     const opts = shuffle([type, ...wrongs]);
     setCurrentHand(hand);
@@ -540,11 +621,18 @@ export default function HandRankingsTrainer() {
   }, []);
 
   const generatePhase2Question = useCallback(() => {
-    let t1, t2;
-    do {
-      t1 = pickRandom(HAND_TYPES);
-      t2 = pickRandom(HAND_TYPES);
-    } while (t1 === t2);
+    let t1;
+    let t2;
+    if (Math.random() < 0.55 && PHASE2_CONFUSION_PAIRS.length > 0) {
+      const pair = pickRandom(PHASE2_CONFUSION_PAIRS);
+      t1 = pair[0];
+      t2 = pair[1];
+    } else {
+      do {
+        t1 = pickRandom(HAND_TYPES);
+        t2 = pickRandom(HAND_TYPES);
+      } while (t1 === t2);
+    }
     setHand1({ cards: generateHand(t1), type: t1 });
     setHand2({ cards: generateHand(t2), type: t2 });
     setP2Selected(null);
@@ -552,6 +640,7 @@ export default function HandRankingsTrainer() {
   }, []);
 
   const startPhase1 = () => {
+    runRecordedRef.current = false;
     setPhase(1);
     setTier(1);
     setQuestionNum(0);
@@ -562,6 +651,14 @@ export default function HandRankingsTrainer() {
     setPhase2Saved(false);
     setScreen("phase1");
     generatePhase1Question(1);
+  };
+
+  const tryStartPhase1 = () => {
+    if (!subLoading && !isPro && getRemainingRuns("hand_rankings") === 0) {
+      setLimitModalOpen(true);
+      return;
+    }
+    startPhase1();
   };
 
   const startPhase2 = () => {
@@ -642,6 +739,15 @@ export default function HandRankingsTrainer() {
     })();
   }, [phase2Saved, screen, totalCorrect, totalQuestions]);
 
+  useEffect(() => {
+    if (screen !== "phase2result" || totalQuestions === 0) return;
+    if (runRecordedRef.current) return;
+    runRecordedRef.current = true;
+    if (!subLoading && !isPro) {
+      recordRun("hand_rankings");
+    }
+  }, [screen, totalQuestions, subLoading, isPro]);
+
   // ─── Screens ───
 
   const renderScreen = () => {
@@ -671,7 +777,26 @@ export default function HandRankingsTrainer() {
             <p style={styles.moduleDesc}>Two hands go head-to-head. Pick the winner. Fast-paced comparisons to build instinct.</p>
           </div>
 
-          <button onClick={startPhase1} style={styles.primaryBtn}>
+          {(() => {
+            const rem =
+              subLoading || isPro ? null : getRemainingRuns("hand_rankings");
+            return (
+              <>
+                {rem != null && rem > 0 && rem < 3 && (
+                  <p style={{ color: "#fbbf24", fontSize: 12, marginBottom: 8, textAlign: "center" }}>
+                    {rem} runs left today
+                  </p>
+                )}
+                {rem === 0 && !isPro && !subLoading && (
+                  <p style={{ fontSize: 32, marginBottom: 8, textAlign: "center" }} aria-hidden>
+                    🔒
+                  </p>
+                )}
+              </>
+            );
+          })()}
+
+          <button onClick={tryStartPhase1} style={styles.primaryBtn}>
             Start Training
           </button>
         </div>
@@ -884,7 +1009,7 @@ export default function HandRankingsTrainer() {
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <button onClick={startPhase1} style={styles.primaryBtn}>Play Again</button>
+              <button onClick={tryStartPhase1} style={styles.primaryBtn}>Play Again</button>
               <button onClick={() => setScreen("menu")} style={styles.secondaryBtn}>Back to Menu</button>
             </div>
           </div>
@@ -909,6 +1034,9 @@ export default function HandRankingsTrainer() {
       </button>
       {showHandChart && (
         <HandRankingsReferenceOverlay onClose={() => setShowHandChart(false)} />
+      )}
+      {limitModalOpen && (
+        <DailyLimitModal onClose={() => setLimitModalOpen(false)} />
       )}
     </>
   );
