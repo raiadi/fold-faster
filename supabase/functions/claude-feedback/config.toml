@@ -1,0 +1,2 @@
+# Require a valid Supabase JWT (Authorization: Bearer <access_token>).
+verify_jwt = true

@@ -1,25 +1,35 @@
 # Edge Functions
 
-## skill-check-feedback
+## Secrets (Anthropic)
 
-Calls the Anthropic API so the API key stays on the server and the browser avoids CORS.
-
-### 1. Set the secret
-
-In Supabase Dashboard: **Project Settings → Edge Functions → Secrets**, add:
-
-- `ANTHROPIC_API_KEY` = your Anthropic API key
-
-Or via CLI (from project root):
+Set once for all functions that call Claude:
 
 ```bash
 supabase secrets set ANTHROPIC_API_KEY=your_key_here
 ```
 
-### 2. Deploy
+(Dashboard: **Project Settings → Edge Functions → Secrets**.)
+
+**Do not** put the Anthropic key in `VITE_*` env vars — it would ship to the browser.
+
+---
+
+## claude-feedback (primary — used by the app)
+
+Generic Claude feedback with **JWT required** (`verify_jwt = true`). The frontend calls this via `supabase.functions.invoke` (session token sent automatically).
+
+**Deploy:**
+
+```bash
+supabase functions deploy claude-feedback
+```
+
+---
+
+## skill-check-feedback (legacy)
+
+Older function with the same Anthropic secret; the **skill check UI now uses `claude-feedback`** via `src/lib/claude.js`. You can keep this deployed for backward compatibility or remove it after migrating any external callers.
 
 ```bash
 supabase functions deploy skill-check-feedback
 ```
-
-After deploying, the skill check in the app will use this function and feedback should load in Chrome.
