@@ -10,12 +10,12 @@ create table if not exists public.users (
   created_at timestamptz not null default now()
 );
 
--- Allow users to insert/update their own row after signup
-create policy "Users can insert own profile" on public.users
+-- Allow users to insert/update/read their own row after signup (names match migration 008)
+create policy "Users can insert their own row" on public.users
   for insert with check (auth.uid() = id);
-create policy "Users can update own profile" on public.users
+create policy "Users can update their own row" on public.users
   for update using (auth.uid() = id);
-create policy "Users can read own profile" on public.users
+create policy "Users can view their own row" on public.users
   for select using (auth.uid() = id);
 
 -- progress
