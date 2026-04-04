@@ -256,7 +256,7 @@ export default function Home() {
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-white/50">🪑 Positions</span>
+                  <span className="text-xs font-medium text-white/50">Positions</span>
                   {positionsComplete && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-brand-green/20 text-brand-green font-medium">
                       ✅
@@ -274,7 +274,7 @@ export default function Home() {
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-white/50">🃏 Hand Rankings</span>
+                  <span className="text-xs font-medium text-white/50">Hand Rankings</span>
                   {handRankingsComplete && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-brand-green/20 text-brand-green font-medium">
                       ✅
@@ -292,7 +292,7 @@ export default function Home() {
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-white/50">🎮 Game Flow</span>
+                  <span className="text-xs font-medium text-white/50">Game Flow</span>
                   {gameFlowComplete && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-brand-green/20 text-brand-green font-medium">
                       ✅
@@ -310,7 +310,7 @@ export default function Home() {
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-white/50">🎯 Ranges</span>
+                  <span className="text-xs font-medium text-white/50">Ranges</span>
                   {rangesComplete && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-brand-green/20 text-brand-green font-medium">
                       ✅
