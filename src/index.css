@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Prevent white viewport bleed behind module routes on large screens */
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    background-color: #0f1923;
+  }
+}

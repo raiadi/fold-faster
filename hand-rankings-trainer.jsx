@@ -1023,11 +1023,15 @@ export default function HandRankingsTrainer() {
 
   return (
     <>
-      {renderScreen()}
+      <div className="min-h-screen bg-[#0f1923] text-white">
+        <div className="max-w-md mx-auto px-4 py-6 min-h-screen pb-28 w-full">
+          {renderScreen()}
+        </div>
+      </div>
       <button
         type="button"
         onClick={() => setShowHandChart(true)}
-        className="fixed bottom-6 right-6 z-40 w-12 h-12 bg-green-600 rounded-full flex items-center justify-center shadow-lg text-xl"
+        className="fixed bottom-6 right-6 z-40 w-12 h-12 bg-[#22c55e] rounded-full flex items-center justify-center shadow-lg text-xl"
         aria-label="Open hand rankings reference"
       >
         📊
@@ -1044,18 +1048,17 @@ export default function HandRankingsTrainer() {
 
 const styles = {
   container: {
-    minHeight: "100vh",
-    background: "linear-gradient(160deg, #0d1117 0%, #161b22 40%, #1a2332 100%)",
+    width: "100%",
     display: "flex",
     justifyContent: "center",
     alignItems: "flex-start",
-    padding: "24px 16px",
+    padding: 0,
     fontFamily: "'Trebuchet MS', 'Segoe UI', sans-serif",
     color: "#ecf0f1",
   },
   inner: {
     width: "100%",
-    maxWidth: 420,
+    maxWidth: "100%",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",

@@ -25,7 +25,7 @@ function shuffle(arr) {
 function GameFlowReferenceOverlay({ onClose }) {
   return (
     <div
-      className="fixed inset-0 z-50 overflow-y-auto bg-gray-950"
+      className="fixed inset-0 z-50 overflow-y-auto bg-gray-950 text-white"
       role="dialog"
       aria-modal="true"
       aria-labelledby="game-flow-ref-title"
@@ -44,7 +44,7 @@ function GameFlowReferenceOverlay({ onClose }) {
         </button>
       </header>
 
-      <div className="mx-auto max-w-[390px] px-4 pb-10 pt-4">
+      <div className="mx-auto max-w-md px-4 pb-10 pt-4">
         <div className="overflow-hidden rounded-xl border border-white/10">
           <table className="w-full text-left text-sm text-white/90">
             <thead>
@@ -240,7 +240,8 @@ export default function GameFlowModule() {
 
   return (
     <>
-      <div className="min-h-screen max-w-[390px] mx-auto bg-[#0f1923] text-white px-4 pt-6 pb-28">
+      <div className="min-h-screen bg-[#0f1923] text-white">
+        <div className="max-w-md mx-auto px-4 py-6 min-h-screen pb-28">
         <button
           type="button"
           onClick={() => navigate('/home')}
@@ -450,6 +451,7 @@ export default function GameFlowModule() {
             </button>
           </section>
         )}
+        </div>
       </div>
 
       <button

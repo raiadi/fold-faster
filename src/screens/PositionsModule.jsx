@@ -196,7 +196,8 @@ export default function PositionsModule() {
 
   return (
     <>
-    <div className="min-h-screen bg-[#0f1923] text-white px-4 pt-6 pb-8">
+    <div className="min-h-screen bg-[#0f1923] text-white">
+      <div className="max-w-md mx-auto px-4 py-6 min-h-screen pb-24">
       <button
         type="button"
         onClick={() => navigate('/home')}
@@ -420,6 +421,7 @@ export default function PositionsModule() {
           </button>
         </section>
       )}
+      </div>
     </div>
 
     <button

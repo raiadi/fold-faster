@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 export default function DailyLimitModal({ onClose }) {
   return (
-    <div className="bg-black/80 fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/95 p-4">
       <div
         className="bg-gray-900 rounded-2xl p-6 mx-4 max-w-sm w-full border border-white/10 shadow-xl"
         role="dialog"

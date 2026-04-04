@@ -70,7 +70,7 @@ export default function PositionChartOverlay({ onClose }) {
         </button>
       </header>
 
-      <div className="mx-auto max-w-[390px] px-4 pb-8 pt-4">
+      <div className="mx-auto max-w-md px-4 pb-8 pt-4">
         {/* Section 1 — table */}
         <section className="mb-6">
           <div

@@ -148,7 +148,8 @@ export default function RangesModule() {
   }, [view, section, isPro, subLoading]);
 
   return (
-    <div className="min-h-screen bg-[#0f1923] text-white px-4 pt-6 pb-28 max-w-[390px] mx-auto">
+    <div className="min-h-screen bg-[#0f1923] text-white">
+      <div className="max-w-md mx-auto px-4 py-6 min-h-screen pb-28">
       <button
         type="button"
         onClick={() => navigate('/home')}
@@ -306,10 +307,11 @@ export default function RangesModule() {
         type="button"
         aria-label="Open range chart"
         onClick={() => setChartOpen(true)}
-        className="fixed bottom-6 right-4 z-50 w-14 h-14 rounded-full bg-[#22c55e] text-2xl shadow-lg flex items-center justify-center hover:opacity-90"
+        className="fixed bottom-6 right-4 z-40 w-14 h-14 rounded-full bg-[#22c55e] text-2xl shadow-lg flex items-center justify-center hover:opacity-90"
       >
         📊
       </button>
+      </div>
 
       <RangeChartOverlay open={chartOpen} onClose={() => setChartOpen(false)} />
       {limitModalOpen && (

@@ -2,10 +2,23 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getLevelFromXp, getLevelProgressPct } from '../lib/progress';
-import { LEAK_LABELS } from '../data/skillCheckScenarios';
-import { MODULE_LABELS, MODULE_SCENARIO_COUNT } from '../data/modules';
 import { useSubscription, getTodaySessionCount } from '../lib/subscription';
 import { getModuleProgress } from '../lib/moduleProgress';
+import { getNextModule } from '../lib/getNextModule';
+
+function getContinueCtaDisplay(nextCta) {
+  if (!nextCta) {
+    return { title: 'Continue Training', icon: '▶', subtitle: '' };
+  }
+  const { intent, label } = nextCta;
+  if (intent === 'review') {
+    return { title: 'Review Weak Spots', icon: '🔄', subtitle: label };
+  }
+  if (intent === 'practice') {
+    return { title: 'Practice Ranges', icon: '🎯', subtitle: 'Keep your edge sharp' };
+  }
+  return { title: 'Continue Training', icon: '▶', subtitle: label };
+}
 
 export default function Home() {
   const navigate = useNavigate();
@@ -15,6 +28,8 @@ export default function Home() {
   const [extraModuleProgress, setExtraModuleProgress] = useState({});
   const [todaySessions, setTodaySessions] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [ctaLoading, setCtaLoading] = useState(true);
+  const [nextCta, setNextCta] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { isPro } = useSubscription();
 
@@ -77,6 +92,35 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [navigate]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setCtaLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) {
+        if (!cancelled) setCtaLoading(false);
+        return;
+      }
+      try {
+        const next = await getNextModule(supabase, user.id);
+        if (!cancelled) setNextCta(next);
+      } catch {
+        if (!cancelled) {
+          setNextCta({
+            route: '/module/positions',
+            label: 'Positions',
+            intent: 'continue',
+          });
+        }
+      } finally {
+        if (!cancelled) setCtaLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-brand-dark flex items-center justify-center text-white">
@@ -99,6 +143,7 @@ export default function Home() {
     && Boolean(extraModuleProgress[31]?.completed)
     && Boolean(extraModuleProgress[32]?.completed);
   const gameFlowComplete = Boolean(extraModuleProgress[40]?.completed);
+  const continueCtaDisplay = getContinueCtaDisplay(nextCta);
   return (
     <div className="min-h-screen bg-brand-dark text-white flex flex-col pb-8">
       {/* Top bar */}
@@ -153,8 +198,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Today's training CTA */}
-        <section>
+        {/* Continue training CTA */}
+        <section className="max-w-md mx-auto w-full">
           {!isPro && todaySessions >= 3 ? (
             <Link
               to="/paywall"
@@ -162,13 +207,25 @@ export default function Home() {
             >
               Daily limit reached — Upgrade to continue
             </Link>
+          ) : ctaLoading ? (
+            <div
+              className="w-full rounded-xl bg-brand-green/30 animate-pulse min-h-[5.5rem]"
+              aria-hidden
+            />
           ) : (
-            <Link
-              to="/skill-check"
-              className="block w-full py-4 rounded-xl bg-brand-green text-brand-dark font-semibold text-center hover:opacity-90 active:scale-[0.98] transition"
+            <button
+              type="button"
+              onClick={() => nextCta && navigate(nextCta.route)}
+              className="w-full py-5 px-4 rounded-xl bg-brand-green text-white font-semibold text-left shadow-lg shadow-black/20 hover:opacity-95 active:scale-[0.98] transition flex flex-col gap-1"
             >
-              Start today's drills
-            </Link>
+              <span className="flex items-center gap-2 text-lg">
+                <span aria-hidden>{continueCtaDisplay.icon}</span>
+                <span>{continueCtaDisplay.title}</span>
+              </span>
+              {continueCtaDisplay.subtitle ? (
+                <span className="text-sm text-white/90 font-normal">{continueCtaDisplay.subtitle}</span>
+              ) : null}
+            </button>
           )}
         </section>
 
