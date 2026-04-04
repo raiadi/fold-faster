@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Home from './pages/Home';
+import Settings from './pages/Settings';
 import PokerTable from './components/PokerTable';
 import PlayingCard from './components/PlayingCard';
 import PositionsModule from './screens/PositionsModule';
@@ -42,6 +43,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/home" element={<Home />} />
+          <Route path="/settings" element={<Settings />} />
           <Route
             path="/dev/poker-table"
             element={(
